@@ -12,6 +12,7 @@ import jwtConfig from './config/jwt.config.js';
 import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthController } from './health/health.controller.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
@@ -28,11 +29,13 @@ import { UsersModule } from './modules/users/users.module.js';
       inject: [appConfig.KEY],
       useFactory: (app: ConfigType<typeof appConfig>) => ({
         throttlers: [{ name: 'default', ttl: app.throttle.ttlSeconds * 1000, limit: app.throttle.limit }],
+        skipIf: () => !app.throttle.enabled,
       }),
     }),
     DatabaseModule,
     RolesModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,6 +1,6 @@
 import { registerAs } from '@nestjs/config';
 import { ENV_DEFAULTS } from './env.validation.js';
-import { envInt, envString } from './env.util.js';
+import { envBool, envInt, envString } from './env.util.js';
 
 function parseTrustProxy(raw: string): boolean | number {
   if (raw === 'true') return true;
@@ -20,5 +20,6 @@ export default registerAs('app', () => ({
   throttle: {
     ttlSeconds: envInt('THROTTLE_TTL', ENV_DEFAULTS.THROTTLE_TTL),
     limit: envInt('THROTTLE_LIMIT', ENV_DEFAULTS.THROTTLE_LIMIT),
+    enabled: envBool('THROTTLE_ENABLED', ENV_DEFAULTS.THROTTLE_ENABLED),
   },
 }));

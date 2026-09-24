@@ -48,6 +48,10 @@ describe('validateEnv (FR-CONF-02/03)', () => {
       ).toThrow('placeholder');
     });
 
+    it('rejects THROTTLE_ENABLED=false', () => {
+      expect(() => validateEnv({ ...prod, THROTTLE_ENABLED: 'false' })).toThrow('THROTTLE_ENABLED');
+    });
+
     it('rejects DATABASE_LOGGING=true', () => {
       expect(() => validateEnv({ ...prod, DATABASE_LOGGING: 'true' })).toThrow('DATABASE_LOGGING');
     });

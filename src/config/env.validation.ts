@@ -19,6 +19,7 @@ export const ENV_DEFAULTS = {
   AUTH_ARGON2_PARALLELISM: 1,
   THROTTLE_TTL: 60,
   THROTTLE_LIMIT: 100,
+  THROTTLE_ENABLED: true,
 } as const;
 
 const MAX_ACCESS_TTL_SECONDS = 60 * 60; // SEC-JWT-07
@@ -69,6 +70,8 @@ export const envValidationSchema = Joi.object({
 
   THROTTLE_TTL: Joi.number().integer().positive().default(ENV_DEFAULTS.THROTTLE_TTL),
   THROTTLE_LIMIT: Joi.number().integer().positive().default(ENV_DEFAULTS.THROTTLE_LIMIT),
+  // Test-only switch; rejected in production.
+  THROTTLE_ENABLED: Joi.boolean().default(ENV_DEFAULTS.THROTTLE_ENABLED),
 
   SEED_ADMIN_EMAIL: Joi.string().email().optional(),
   SEED_ADMIN_PASSWORD: Joi.string().min(8).max(128).optional(),
@@ -96,6 +99,9 @@ export const envValidationSchema = Joi.object({
       SECRET_PLACEHOLDERS.includes(String(env.JWT_REFRESH_SECRET))
     ) {
       return helpers.message({ custom: 'JWT secrets must not use placeholder values in production' });
+    }
+    if (env.THROTTLE_ENABLED === false) {
+      return helpers.message({ custom: '"THROTTLE_ENABLED" must be true in production' });
     }
     if (env.DATABASE_LOGGING === true) {
       return helpers.message({ custom: '"DATABASE_LOGGING" must be false in production' });

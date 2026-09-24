@@ -13,5 +13,6 @@ export const TEST_ENV: Record<string, string> = {
   JWT_AUDIENCE: 'nestjs-boilerplate-api',
   // Generous global limit so functional e2e tests are not throttled; throttling has its own test.
   THROTTLE_LIMIT: '10000',
+  THROTTLE_ENABLED: 'false',
   CORS_ORIGINS: 'http://localhost:5173',
 };
