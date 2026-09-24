@@ -15,7 +15,9 @@ describe('ResponseEnvelopeInterceptor', () => {
   it('wraps data in the success envelope and disables caching', async () => {
     const setHeader = vi.fn();
     const handler: CallHandler = { handle: () => of({ user: { id: '1' } }) };
-    await expect(lastValueFrom(interceptor.intercept(context(setHeader), handler))).resolves.toEqual({
+    await expect(
+      lastValueFrom(interceptor.intercept(context(setHeader), handler)),
+    ).resolves.toEqual({
       success: true,
       data: { user: { id: '1' } },
     });
@@ -24,7 +26,9 @@ describe('ResponseEnvelopeInterceptor', () => {
 
   it('uses null when the handler returns nothing', async () => {
     const handler: CallHandler = { handle: () => of(undefined) };
-    await expect(lastValueFrom(interceptor.intercept(context(), handler))).resolves.toEqual({
+    await expect(
+      lastValueFrom(interceptor.intercept(context(), handler)),
+    ).resolves.toEqual({
       success: true,
       data: null,
     });

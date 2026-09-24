@@ -5,7 +5,11 @@ import { Role, ROLE_ORDER } from '../../roles/role.enum.js';
 import type { UserStatus } from '../../users/enums/user-status.enum.js';
 import { AuthSessionEntity } from './entities/auth-session.entity.js';
 import { SessionRevokedReason } from './enums/session-revoked-reason.enum.js';
-import type { AuthSession, AuthSessionWithHash, CreateSessionInput } from './types/auth-session.type.js';
+import type {
+  AuthSession,
+  AuthSessionWithHash,
+  CreateSessionInput,
+} from './types/auth-session.type.js';
 
 /** Identity data resolved for an access token in a single query (AUTH_DATABASE §6). */
 export interface SessionIdentity {
@@ -35,7 +39,8 @@ function toSession(entity: AuthSessionEntity): AuthSession {
 @Injectable()
 export class SessionsRepository {
   constructor(
-    @InjectRepository(AuthSessionEntity) private readonly sessions: Repository<AuthSessionEntity>,
+    @InjectRepository(AuthSessionEntity)
+    private readonly sessions: Repository<AuthSessionEntity>,
   ) {}
 
   async create(input: CreateSessionInput): Promise<void> {
@@ -47,21 +52,34 @@ export class SessionsRepository {
    * missing, revoked, expired or not owned by `userId`. The user's status is returned as-is
    * so the caller can distinguish "not active" (403) from "invalid" (401).
    */
-  async findActiveIdentity(sessionId: string, userId: string): Promise<SessionIdentity | null> {
-    const rows: { email: string; status: UserStatus; role: Role | null }[] = await this.sessions
-      .createQueryBuilder('s')
-      .innerJoin('users', 'u', 'u.id = s.user_id')
-      .leftJoin('user_roles', 'r', 'r.user_id = u.id')
-      .select(['u.email AS email', 'u.status AS status', 'r.role AS role'])
-      .where('s.id = :sessionId AND s.user_id = :userId', { sessionId, userId })
-      .andWhere('s.revoked_at IS NULL AND s.expires_at > now()')
-      .getRawMany();
+  async findActiveIdentity(
+    sessionId: string,
+    userId: string,
+  ): Promise<SessionIdentity | null> {
+    const rows: { email: string; status: UserStatus; role: Role | null }[] =
+      await this.sessions
+        .createQueryBuilder('s')
+        .innerJoin('users', 'u', 'u.id = s.user_id')
+        .leftJoin('user_roles', 'r', 'r.user_id = u.id')
+        .select(['u.email AS email', 'u.status AS status', 'r.role AS role'])
+        .where('s.id = :sessionId AND s.user_id = :userId', {
+          sessionId,
+          userId,
+        })
+        .andWhere('s.revoked_at IS NULL AND s.expires_at > now()')
+        .getRawMany();
     if (rows.length === 0) return null;
     const roles = rows
       .map((row) => row.role)
       .filter((role): role is Role => role !== null)
       .sort((a, b) => ROLE_ORDER.indexOf(a) - ROLE_ORDER.indexOf(b));
-    return { sessionId, userId, email: rows[0].email, status: rows[0].status, roles };
+    return {
+      sessionId,
+      userId,
+      email: rows[0].email,
+      status: rows[0].status,
+      roles,
+    };
   }
 
   /** Loads a session including its current refresh-token hash (refresh flow only). */
@@ -71,7 +89,9 @@ export class SessionsRepository {
       .addSelect('s.refreshTokenHash')
       .where('s.id = :sessionId', { sessionId })
       .getOne();
-    return entity ? { ...toSession(entity), refreshTokenHash: entity.refreshTokenHash } : null;
+    return entity
+      ? { ...toSession(entity), refreshTokenHash: entity.refreshTokenHash }
+      : null;
   }
 
   /**
@@ -92,7 +112,10 @@ export class SessionsRepository {
         expiresAt: newExpiresAt,
         lastUsedAt: () => 'now()',
       })
-      .where('id = :sessionId AND refresh_token_hash = :currentHash', { sessionId, currentHash })
+      .where('id = :sessionId AND refresh_token_hash = :currentHash', {
+        sessionId,
+        currentHash,
+      })
       .andWhere('revoked_at IS NULL AND expires_at > now()')
       .execute();
     return result.affected === 1;
@@ -118,23 +141,42 @@ export class SessionsRepository {
     return this.revokeWhere(reason, 'id = :sessionId', { sessionId });
   }
 
-  revokeAllForUser(userId: string, reason: SessionRevokedReason): Promise<number> {
+  revokeAllForUser(
+    userId: string,
+    reason: SessionRevokedReason,
+  ): Promise<number> {
     return this.revokeWhere(reason, 'user_id = :userId', { userId });
   }
 
-  revokeAllExcept(userId: string, keepSessionId: string, reason: SessionRevokedReason): Promise<number> {
-    return this.revokeWhere(reason, 'user_id = :userId AND id <> :keepSessionId', {
-      userId,
-      keepSessionId,
-    });
+  revokeAllExcept(
+    userId: string,
+    keepSessionId: string,
+    reason: SessionRevokedReason,
+  ): Promise<number> {
+    return this.revokeWhere(
+      reason,
+      'user_id = :userId AND id <> :keepSessionId',
+      {
+        userId,
+        keepSessionId,
+      },
+    );
   }
 
   /** Revokes one usable session owned by the user. 0 ⇒ not found / not owned / already ended. */
-  revokeOwned(userId: string, sessionId: string, reason: SessionRevokedReason): Promise<number> {
-    return this.revokeWhere(reason, 'user_id = :userId AND id = :sessionId AND expires_at > now()', {
-      userId,
-      sessionId,
-    });
+  revokeOwned(
+    userId: string,
+    sessionId: string,
+    reason: SessionRevokedReason,
+  ): Promise<number> {
+    return this.revokeWhere(
+      reason,
+      'user_id = :userId AND id = :sessionId AND expires_at > now()',
+      {
+        userId,
+        sessionId,
+      },
+    );
   }
 
   async listActiveForUser(userId: string): Promise<AuthSession[]> {

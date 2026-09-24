@@ -6,7 +6,11 @@ import { AppException } from '../../common/exceptions/app.exception.js';
 export const UsersErrors = {
   emailAlreadyExists: () =>
     new AppException(HttpStatus.CONFLICT, ErrorCode.AUTH_EMAIL_ALREADY_EXISTS),
-  notFound: () => new AppException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND),
+  notFound: () =>
+    new AppException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND),
   selfModificationForbidden: () =>
-    new AppException(HttpStatus.FORBIDDEN, ErrorCode.USER_SELF_MODIFICATION_FORBIDDEN),
+    new AppException(
+      HttpStatus.FORBIDDEN,
+      ErrorCode.USER_SELF_MODIFICATION_FORBIDDEN,
+    ),
 };

@@ -18,13 +18,18 @@ function setup() {
   const repo = {
     findById: vi.fn().mockResolvedValue(user),
     findByEmail: vi.fn().mockResolvedValue(user),
-    findByEmailWithCredentials: vi.fn().mockResolvedValue({ ...user, passwordHash: 'h' }),
+    findByEmailWithCredentials: vi
+      .fn()
+      .mockResolvedValue({ ...user, passwordHash: 'h' }),
     existsByEmail: vi.fn().mockResolvedValue(false),
     create: vi.fn().mockResolvedValue(user),
     updateStatus: vi.fn(),
     setRoles: vi.fn(),
   };
-  return { repo, service: new UsersService(repo as unknown as UsersRepository) };
+  return {
+    repo,
+    service: new UsersService(repo as unknown as UsersRepository),
+  };
 }
 
 describe('UsersService', () => {
@@ -34,7 +39,9 @@ describe('UsersService', () => {
     await service.findByEmailWithCredentials('USER@example.com');
     await service.existsByEmail('User@EXAMPLE.com');
     expect(repo.findByEmail).toHaveBeenCalledWith('user@example.com');
-    expect(repo.findByEmailWithCredentials).toHaveBeenCalledWith('user@example.com');
+    expect(repo.findByEmailWithCredentials).toHaveBeenCalledWith(
+      'user@example.com',
+    );
     expect(repo.existsByEmail).toHaveBeenCalledWith('user@example.com');
   });
 
@@ -51,14 +58,20 @@ describe('UsersService', () => {
 
   it('always keeps USER when roles are given (FR-ROLE-11)', async () => {
     const { repo, service } = setup();
-    await service.create({ email: 'a@b.co', passwordHash: 'h', roles: [Role.ADMIN] });
+    await service.create({
+      email: 'a@b.co',
+      passwordHash: 'h',
+      roles: [Role.ADMIN],
+    });
     expect(repo.create.mock.calls[0][0].roles).toEqual([Role.USER, Role.ADMIN]);
   });
 
   describe('admin operations (FR-ADMIN)', () => {
     it('forbids changing your own status (FR-ADMIN-06)', async () => {
       const { repo, service } = setup();
-      await expect(service.updateStatus('u1', 'u1', UserStatus.SUSPENDED)).rejects.toMatchObject({
+      await expect(
+        service.updateStatus('u1', 'u1', UserStatus.SUSPENDED),
+      ).rejects.toMatchObject({
         code: 'USER_SELF_MODIFICATION_FORBIDDEN',
       });
       expect(repo.updateStatus).not.toHaveBeenCalled();
@@ -66,7 +79,9 @@ describe('UsersService', () => {
 
     it('forbids removing your own ADMIN role', async () => {
       const { service } = setup();
-      await expect(service.setRoles('u1', 'u1', [Role.USER])).rejects.toMatchObject({
+      await expect(
+        service.setRoles('u1', 'u1', [Role.USER]),
+      ).rejects.toMatchObject({
         code: 'USER_SELF_MODIFICATION_FORBIDDEN',
       });
     });
@@ -80,7 +95,9 @@ describe('UsersService', () => {
     it('returns 404 for an unknown target', async () => {
       const { repo, service } = setup();
       repo.findById.mockResolvedValueOnce(null);
-      await expect(service.updateStatus('admin', 'missing', UserStatus.ACTIVE)).rejects.toMatchObject({
+      await expect(
+        service.updateStatus('admin', 'missing', UserStatus.ACTIVE),
+      ).rejects.toMatchObject({
         code: 'RESOURCE_NOT_FOUND',
       });
     });
@@ -88,7 +105,10 @@ describe('UsersService', () => {
     it('updates another user status', async () => {
       const { repo, service } = setup();
       await service.updateStatus('admin', 'u1', UserStatus.SUSPENDED);
-      expect(repo.updateStatus).toHaveBeenCalledWith('u1', UserStatus.SUSPENDED);
+      expect(repo.updateStatus).toHaveBeenCalledWith(
+        'u1',
+        UserStatus.SUSPENDED,
+      );
     });
   });
 });

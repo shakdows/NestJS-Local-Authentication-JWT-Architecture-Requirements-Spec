@@ -32,12 +32,20 @@ export class JwtStrategy extends PassportStrategy(Strategy, JWT_STRATEGY) {
   }
 
   async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
-    if (payload.type !== 'access' || typeof payload.sid !== 'string' || typeof payload.sub !== 'string') {
+    if (
+      payload.type !== 'access' ||
+      typeof payload.sid !== 'string' ||
+      typeof payload.sub !== 'string'
+    ) {
       throw AuthErrors.tokenInvalid();
     }
-    const identity = await this.sessionsService.findActiveSessionForAccess(payload.sid, payload.sub);
+    const identity = await this.sessionsService.findActiveSessionForAccess(
+      payload.sid,
+      payload.sub,
+    );
     if (!identity) throw AuthErrors.tokenInvalid();
-    if (identity.status !== UserStatus.ACTIVE) throw AuthErrors.accountNotActive();
+    if (identity.status !== UserStatus.ACTIVE)
+      throw AuthErrors.accountNotActive();
     return {
       id: identity.userId,
       email: identity.email,

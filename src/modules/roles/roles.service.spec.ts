@@ -5,7 +5,9 @@ describe('RolesService (FR-ROLE-03/04)', () => {
   const service = new RolesService();
 
   it('expands ADMIN to include USER', () => {
-    expect(service.expand([Role.ADMIN])).toEqual(new Set([Role.ADMIN, Role.USER]));
+    expect(service.expand([Role.ADMIN])).toEqual(
+      new Set([Role.ADMIN, Role.USER]),
+    );
   });
 
   it('does not expand USER upwards', () => {

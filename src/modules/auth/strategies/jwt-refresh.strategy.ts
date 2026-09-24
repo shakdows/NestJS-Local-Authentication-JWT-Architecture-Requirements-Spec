@@ -14,7 +14,10 @@ import type { RefreshContext } from '../types/refresh-context.type.js';
  * refresh secret; session checks and reuse detection are delegated to SessionsService.
  */
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, JWT_REFRESH_STRATEGY) {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  JWT_REFRESH_STRATEGY,
+) {
   constructor(
     @Inject(jwtConfig.KEY) config: ConfigType<typeof jwtConfig>,
     private readonly sessionsService: SessionsService,
@@ -31,7 +34,10 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, JWT_REFRESH_S
     });
   }
 
-  validate(req: Request, payload: RefreshTokenPayload): Promise<RefreshContext> {
+  validate(
+    req: Request,
+    payload: RefreshTokenPayload,
+  ): Promise<RefreshContext> {
     const rawToken = (req.body as { refreshToken: string }).refreshToken;
     return this.sessionsService.validateForRefresh(payload, rawToken);
   }

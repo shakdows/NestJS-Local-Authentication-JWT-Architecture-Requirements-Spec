@@ -54,7 +54,9 @@ describe('Role-based authorization (e2e)', () => {
       imports: [AppModule, RolesModule],
       controllers: [ProbeController],
     }).compile();
-    app = moduleRef.createNestApplication<NestExpressApplication>({ logger: ['error'] });
+    app = moduleRef.createNestApplication<NestExpressApplication>({
+      logger: ['error'],
+    });
     configureApp(app);
     await app.init();
   });
@@ -102,13 +104,22 @@ describe('Role-based authorization (e2e)', () => {
   it('invalid role: USER on an ADMIN route → 403 AUTH_FORBIDDEN', async () => {
     const { tokens } = await asUser();
     const res = await get('/probe/admin', tokens.accessToken).expect(403);
-    expect(res.body.error).toMatchObject({ code: 'AUTH_FORBIDDEN', message: 'Insufficient permissions' });
+    expect(res.body.error).toMatchObject({
+      code: 'AUTH_FORBIDDEN',
+      message: 'Insufficient permissions',
+    });
   });
 
   it('FR-ROLE-05: role removed in the DB → 403 even though the JWT claim still says ADMIN', async () => {
     const { admin, tokens } = await asAdmin();
-    expect(decode<{ roles: string[] }>(tokens.accessToken).roles).toContain('ADMIN');
-    await app.get(DataSource).query(`DELETE FROM user_roles WHERE user_id = $1 AND role = 'ADMIN'`, [admin.id]);
+    expect(decode<{ roles: string[] }>(tokens.accessToken).roles).toContain(
+      'ADMIN',
+    );
+    await app
+      .get(DataSource)
+      .query(`DELETE FROM user_roles WHERE user_id = $1 AND role = 'ADMIN'`, [
+        admin.id,
+      ]);
     await get('/probe/admin', tokens.accessToken).expect(403);
   });
 
@@ -121,7 +132,10 @@ describe('Role-based authorization (e2e)', () => {
 
   it('FR-ROLE-06: RolesGuard without JwtAuthGuard fails closed', async () => {
     const { tokens } = await asUser();
-    const res = await get('/probe/roles-without-auth-guard', tokens.accessToken).expect(401);
+    const res = await get(
+      '/probe/roles-without-auth-guard',
+      tokens.accessToken,
+    ).expect(401);
     expect(res.body.data).toBeUndefined();
   });
 });

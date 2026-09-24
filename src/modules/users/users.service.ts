@@ -31,8 +31,12 @@ export class UsersService {
   }
 
   /** Like {@link findByEmail} but includes `passwordHash`. Reserved for AuthService. */
-  findByEmailWithCredentials(email: string): Promise<UserWithCredentials | null> {
-    return this.usersRepository.findByEmailWithCredentials(normalizeEmail(email));
+  findByEmailWithCredentials(
+    email: string,
+  ): Promise<UserWithCredentials | null> {
+    return this.usersRepository.findByEmailWithCredentials(
+      normalizeEmail(email),
+    );
   }
 
   /** True when a user with this (normalized) email exists. */
@@ -84,7 +88,11 @@ export class UsersService {
    * Admin status change (FR-ADMIN-04). An admin cannot change their own status (FR-ADMIN-06).
    * Takes effect immediately because auth checks status on every request.
    */
-  async updateStatus(actorId: string, id: string, status: UserStatus): Promise<User> {
+  async updateStatus(
+    actorId: string,
+    id: string,
+    status: UserStatus,
+  ): Promise<User> {
     if (actorId === id) throw UsersErrors.selfModificationForbidden();
     await this.getByIdOrFail(id);
     await this.usersRepository.updateStatus(id, status);

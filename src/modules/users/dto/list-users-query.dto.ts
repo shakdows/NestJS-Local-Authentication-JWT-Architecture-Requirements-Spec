@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Role } from '../../roles/role.enum.js';
 import { UserStatus } from '../enums/user-status.enum.js';
 
@@ -19,11 +27,15 @@ export class ListUsersQueryDto {
   limit: number = 20;
 
   @IsOptional()
-  @IsEnum(UserStatus, { message: `status must be one of: ${Object.values(UserStatus).join(', ')}` })
+  @IsEnum(UserStatus, {
+    message: `status must be one of: ${Object.values(UserStatus).join(', ')}`,
+  })
   status?: UserStatus;
 
   @IsOptional()
-  @IsEnum(Role, { message: `role must be one of: ${Object.values(Role).join(', ')}` })
+  @IsEnum(Role, {
+    message: `role must be one of: ${Object.values(Role).join(', ')}`,
+  })
   role?: Role;
 
   @IsOptional()

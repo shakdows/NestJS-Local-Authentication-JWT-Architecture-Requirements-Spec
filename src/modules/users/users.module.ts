@@ -9,7 +9,10 @@ import { UsersRepository } from './users.repository.js';
 import { UsersService } from './users.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity, UserRoleEntity]), RolesModule],
+  imports: [
+    TypeOrmModule.forFeature([UserEntity, UserRoleEntity]),
+    RolesModule,
+  ],
   controllers: [UsersController],
   providers: [UsersRepository, UsersService, UsersAdminService],
   exports: [UsersService],

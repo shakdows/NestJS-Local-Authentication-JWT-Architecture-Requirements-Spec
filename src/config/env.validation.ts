@@ -31,7 +31,10 @@ export const SECRET_PLACEHOLDERS = [
   'change-me-refresh-secret-at-least-32-characters-long',
 ];
 
-const duration = Joi.string().pattern(DURATION_PATTERN, 'duration (e.g. 15m, 7d)');
+const duration = Joi.string().pattern(
+  DURATION_PATTERN,
+  'duration (e.g. 15m, 7d)',
+);
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
@@ -59,17 +62,35 @@ export const envValidationSchema = Joi.object({
     .min(32)
     .required()
     .invalid(Joi.ref('JWT_ACCESS_SECRET'))
-    .messages({ 'any.invalid': '"JWT_REFRESH_SECRET" must differ from "JWT_ACCESS_SECRET"' }),
+    .messages({
+      'any.invalid':
+        '"JWT_REFRESH_SECRET" must differ from "JWT_ACCESS_SECRET"',
+    }),
   JWT_REFRESH_EXPIRES_IN: duration.default(ENV_DEFAULTS.JWT_REFRESH_EXPIRES_IN),
   JWT_ISSUER: Joi.string().default(ENV_DEFAULTS.JWT_ISSUER),
   JWT_AUDIENCE: Joi.string().default(ENV_DEFAULTS.JWT_AUDIENCE),
 
-  AUTH_ARGON2_MEMORY_COST: Joi.number().integer().min(19456).default(ENV_DEFAULTS.AUTH_ARGON2_MEMORY_COST),
-  AUTH_ARGON2_TIME_COST: Joi.number().integer().min(2).default(ENV_DEFAULTS.AUTH_ARGON2_TIME_COST),
-  AUTH_ARGON2_PARALLELISM: Joi.number().integer().min(1).default(ENV_DEFAULTS.AUTH_ARGON2_PARALLELISM),
+  AUTH_ARGON2_MEMORY_COST: Joi.number()
+    .integer()
+    .min(19456)
+    .default(ENV_DEFAULTS.AUTH_ARGON2_MEMORY_COST),
+  AUTH_ARGON2_TIME_COST: Joi.number()
+    .integer()
+    .min(2)
+    .default(ENV_DEFAULTS.AUTH_ARGON2_TIME_COST),
+  AUTH_ARGON2_PARALLELISM: Joi.number()
+    .integer()
+    .min(1)
+    .default(ENV_DEFAULTS.AUTH_ARGON2_PARALLELISM),
 
-  THROTTLE_TTL: Joi.number().integer().positive().default(ENV_DEFAULTS.THROTTLE_TTL),
-  THROTTLE_LIMIT: Joi.number().integer().positive().default(ENV_DEFAULTS.THROTTLE_LIMIT),
+  THROTTLE_TTL: Joi.number()
+    .integer()
+    .positive()
+    .default(ENV_DEFAULTS.THROTTLE_TTL),
+  THROTTLE_LIMIT: Joi.number()
+    .integer()
+    .positive()
+    .default(ENV_DEFAULTS.THROTTLE_LIMIT),
   // Test-only switch; rejected in production.
   THROTTLE_ENABLED: Joi.boolean().default(ENV_DEFAULTS.THROTTLE_ENABLED),
 
@@ -79,32 +100,47 @@ export const envValidationSchema = Joi.object({
   const accessTtl = parseDurationToSeconds(String(env.JWT_ACCESS_EXPIRES_IN));
   const refreshTtl = parseDurationToSeconds(String(env.JWT_REFRESH_EXPIRES_IN));
   if (accessTtl > MAX_ACCESS_TTL_SECONDS) {
-    return helpers.message({ custom: '"JWT_ACCESS_EXPIRES_IN" must be at most 1h' });
+    return helpers.message({
+      custom: '"JWT_ACCESS_EXPIRES_IN" must be at most 1h',
+    });
   }
   if (refreshTtl > MAX_REFRESH_TTL_SECONDS) {
-    return helpers.message({ custom: '"JWT_REFRESH_EXPIRES_IN" must be at most 30d' });
+    return helpers.message({
+      custom: '"JWT_REFRESH_EXPIRES_IN" must be at most 30d',
+    });
   }
   if (refreshTtl <= accessTtl) {
     return helpers.message({
-      custom: '"JWT_REFRESH_EXPIRES_IN" must be longer than "JWT_ACCESS_EXPIRES_IN"',
+      custom:
+        '"JWT_REFRESH_EXPIRES_IN" must be longer than "JWT_ACCESS_EXPIRES_IN"',
     });
   }
   if (env.NODE_ENV === 'production') {
-    const origins = String(env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim());
+    const origins = String(env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((o) => o.trim());
     if (origins.includes('*')) {
-      return helpers.message({ custom: '"CORS_ORIGINS" must not contain * in production' });
+      return helpers.message({
+        custom: '"CORS_ORIGINS" must not contain * in production',
+      });
     }
     if (
       SECRET_PLACEHOLDERS.includes(String(env.JWT_ACCESS_SECRET)) ||
       SECRET_PLACEHOLDERS.includes(String(env.JWT_REFRESH_SECRET))
     ) {
-      return helpers.message({ custom: 'JWT secrets must not use placeholder values in production' });
+      return helpers.message({
+        custom: 'JWT secrets must not use placeholder values in production',
+      });
     }
     if (env.THROTTLE_ENABLED === false) {
-      return helpers.message({ custom: '"THROTTLE_ENABLED" must be true in production' });
+      return helpers.message({
+        custom: '"THROTTLE_ENABLED" must be true in production',
+      });
     }
     if (env.DATABASE_LOGGING === true) {
-      return helpers.message({ custom: '"DATABASE_LOGGING" must be false in production' });
+      return helpers.message({
+        custom: '"DATABASE_LOGGING" must be false in production',
+      });
     }
   }
   return env;
@@ -114,7 +150,9 @@ export const envValidationSchema = Joi.object({
  * Validates raw environment variables. Used by `ConfigModule.forRoot({ validate })`.
  * Throws a single error listing every problem, so the app refuses to start (FR-CONF-02).
  */
-export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
+export function validateEnv(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
   const { error, value } = envValidationSchema.validate(config, {
     abortEarly: false,
     allowUnknown: true,

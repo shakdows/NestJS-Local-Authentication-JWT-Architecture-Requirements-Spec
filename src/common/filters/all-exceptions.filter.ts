@@ -28,7 +28,8 @@ const STATUS_TO_CODE: Partial<Record<number, ErrorCode>> = {
 
 function fromStatus(status: number): ResolvedError {
   const code =
-    STATUS_TO_CODE[status] ?? (status < 500 ? ErrorCode.BAD_REQUEST : ErrorCode.INTERNAL_ERROR);
+    STATUS_TO_CODE[status] ??
+    (status < 500 ? ErrorCode.BAD_REQUEST : ErrorCode.INTERNAL_ERROR);
   return { status, code, message: ERROR_MESSAGES[code], details: null };
 }
 
@@ -77,7 +78,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (typeof status === 'number' && status >= 400 && status < 500) {
       return fromStatus(status);
     }
-    const error = exception instanceof Error ? exception : new Error(String(exception));
+    const error =
+      exception instanceof Error ? exception : new Error(String(exception));
     this.logger.error(`Unhandled error: ${error.message}`, error.stack);
     return fromStatus(HttpStatus.INTERNAL_SERVER_ERROR);
   }

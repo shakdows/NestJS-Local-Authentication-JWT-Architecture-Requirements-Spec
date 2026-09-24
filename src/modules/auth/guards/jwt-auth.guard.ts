@@ -5,7 +5,10 @@ import { JWT_STRATEGY } from '../auth.constants.js';
 import { AuthErrors } from '../auth.errors.js';
 
 /** Maps passport-jwt failures to stable codes: missing / expired / invalid (FR-GUARD-03). */
-export function mapAccessTokenFailure(err: unknown, info: unknown): AppException {
+export function mapAccessTokenFailure(
+  err: unknown,
+  info: unknown,
+): AppException {
   if (err instanceof AppException) return err;
   const failure = info as { name?: string; message?: string } | undefined;
   if (failure?.name === 'TokenExpiredError') return AuthErrors.tokenExpired();

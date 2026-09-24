@@ -17,18 +17,50 @@ describe('validateEnv (FR-CONF-02/03)', () => {
   });
 
   it.each([
-    ['missing JWT_ACCESS_SECRET', { JWT_ACCESS_SECRET: undefined }, 'JWT_ACCESS_SECRET'],
-    ['short JWT_ACCESS_SECRET', { JWT_ACCESS_SECRET: 'short' }, 'JWT_ACCESS_SECRET'],
-    ['missing JWT_REFRESH_SECRET', { JWT_REFRESH_SECRET: undefined }, 'JWT_REFRESH_SECRET'],
+    [
+      'missing JWT_ACCESS_SECRET',
+      { JWT_ACCESS_SECRET: undefined },
+      'JWT_ACCESS_SECRET',
+    ],
+    [
+      'short JWT_ACCESS_SECRET',
+      { JWT_ACCESS_SECRET: 'short' },
+      'JWT_ACCESS_SECRET',
+    ],
+    [
+      'missing JWT_REFRESH_SECRET',
+      { JWT_REFRESH_SECRET: undefined },
+      'JWT_REFRESH_SECRET',
+    ],
     ['equal secrets', { JWT_REFRESH_SECRET: 'a'.repeat(32) }, 'must differ'],
     ['missing DATABASE_URL', { DATABASE_URL: undefined }, 'DATABASE_URL'],
-    ['non-postgres DATABASE_URL', { DATABASE_URL: 'mysql://x@y/z' }, 'DATABASE_URL'],
-    ['bad duration', { JWT_ACCESS_EXPIRES_IN: '15 minutes' }, 'JWT_ACCESS_EXPIRES_IN'],
+    [
+      'non-postgres DATABASE_URL',
+      { DATABASE_URL: 'mysql://x@y/z' },
+      'DATABASE_URL',
+    ],
+    [
+      'bad duration',
+      { JWT_ACCESS_EXPIRES_IN: '15 minutes' },
+      'JWT_ACCESS_EXPIRES_IN',
+    ],
     ['access TTL above 1h', { JWT_ACCESS_EXPIRES_IN: '2h' }, 'at most 1h'],
     ['refresh TTL above 30d', { JWT_REFRESH_EXPIRES_IN: '31d' }, 'at most 30d'],
-    ['refresh not longer than access', { JWT_ACCESS_EXPIRES_IN: '1h', JWT_REFRESH_EXPIRES_IN: '60m' }, 'longer than'],
-    ['argon2 memory below minimum', { AUTH_ARGON2_MEMORY_COST: '1024' }, 'AUTH_ARGON2_MEMORY_COST'],
-    ['argon2 time cost below minimum', { AUTH_ARGON2_TIME_COST: '1' }, 'AUTH_ARGON2_TIME_COST'],
+    [
+      'refresh not longer than access',
+      { JWT_ACCESS_EXPIRES_IN: '1h', JWT_REFRESH_EXPIRES_IN: '60m' },
+      'longer than',
+    ],
+    [
+      'argon2 memory below minimum',
+      { AUTH_ARGON2_MEMORY_COST: '1024' },
+      'AUTH_ARGON2_MEMORY_COST',
+    ],
+    [
+      'argon2 time cost below minimum',
+      { AUTH_ARGON2_TIME_COST: '1' },
+      'AUTH_ARGON2_TIME_COST',
+    ],
     ['invalid NODE_ENV', { NODE_ENV: 'staging' }, 'NODE_ENV'],
     ['API_PREFIX with slash', { API_PREFIX: '/api' }, 'API_PREFIX'],
   ])('rejects %s', (_name, override, message) => {
@@ -39,7 +71,9 @@ describe('validateEnv (FR-CONF-02/03)', () => {
     const prod = { ...valid, NODE_ENV: 'production' };
 
     it('rejects * in CORS_ORIGINS', () => {
-      expect(() => validateEnv({ ...prod, CORS_ORIGINS: '*' })).toThrow('CORS_ORIGINS');
+      expect(() => validateEnv({ ...prod, CORS_ORIGINS: '*' })).toThrow(
+        'CORS_ORIGINS',
+      );
     });
 
     it('rejects placeholder secrets (SEC-CONF-03)', () => {
@@ -49,11 +83,15 @@ describe('validateEnv (FR-CONF-02/03)', () => {
     });
 
     it('rejects THROTTLE_ENABLED=false', () => {
-      expect(() => validateEnv({ ...prod, THROTTLE_ENABLED: 'false' })).toThrow('THROTTLE_ENABLED');
+      expect(() => validateEnv({ ...prod, THROTTLE_ENABLED: 'false' })).toThrow(
+        'THROTTLE_ENABLED',
+      );
     });
 
     it('rejects DATABASE_LOGGING=true', () => {
-      expect(() => validateEnv({ ...prod, DATABASE_LOGGING: 'true' })).toThrow('DATABASE_LOGGING');
+      expect(() => validateEnv({ ...prod, DATABASE_LOGGING: 'true' })).toThrow(
+        'DATABASE_LOGGING',
+      );
     });
 
     it('accepts a proper production config', () => {

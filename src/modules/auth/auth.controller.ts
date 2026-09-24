@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ClientContext } from '../../common/decorators/client-context.decorator.js';
 import type { ClientContext as ClientContextType } from '../../common/types/client-context.type.js';
@@ -36,7 +44,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: AUTH_THROTTLE.refresh })
   @UseGuards(JwtRefreshGuard)
-  refresh(@Body() _dto: RefreshTokenDto, @CurrentUser() refresh: RefreshContext) {
+  refresh(
+    @Body() _dto: RefreshTokenDto,
+    @CurrentUser() refresh: RefreshContext,
+  ) {
     return this.authService.refreshTokens(refresh);
   }
 

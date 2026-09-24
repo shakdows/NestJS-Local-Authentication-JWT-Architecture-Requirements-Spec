@@ -15,7 +15,9 @@ async function main(): Promise<void> {
           OR (expires_at < now() - make_interval(days => $1))`,
       [RETENTION_DAYS],
     )) as [unknown, number];
-    console.log(`Purged ${deleted} ended session(s) older than ${RETENTION_DAYS} days.`);
+    console.log(
+      `Purged ${deleted} ended session(s) older than ${RETENTION_DAYS} days.`,
+    );
   } finally {
     await dataSource.destroy();
   }

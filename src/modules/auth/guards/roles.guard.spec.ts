@@ -15,7 +15,8 @@ function context(user: unknown) {
 describe('RolesGuard (FR-ROLE-03..07)', () => {
   const reflector = new Reflector();
   const guard = new RolesGuard(reflector, new RolesService());
-  const withRoles = (roles: Role[] | undefined) => vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(roles);
+  const withRoles = (roles: Role[] | undefined) =>
+    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(roles);
 
   afterEach(() => vi.restoreAllMocks());
 
@@ -26,12 +27,16 @@ describe('RolesGuard (FR-ROLE-03..07)', () => {
 
   it('fails closed with 401 when @Roles is present but there is no user', () => {
     withRoles([Role.USER]);
-    expect(() => guard.canActivate(context(undefined))).toThrow(expect.objectContaining({ code: 'AUTH_TOKEN_MISSING' }));
+    expect(() => guard.canActivate(context(undefined))).toThrow(
+      expect.objectContaining({ code: 'AUTH_TOKEN_MISSING' }),
+    );
   });
 
   it('allows a matching role', () => {
     withRoles([Role.ADMIN]);
-    expect(guard.canActivate(context({ roles: [Role.USER, Role.ADMIN] }))).toBe(true);
+    expect(guard.canActivate(context({ roles: [Role.USER, Role.ADMIN] }))).toBe(
+      true,
+    );
   });
 
   it('allows ADMIN on a USER route (hierarchy)', () => {

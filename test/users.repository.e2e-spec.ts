@@ -21,49 +21,85 @@ describe('Users persistence (integration)', () => {
   afterAll(() => app.close());
 
   it('creates and reads back a user with roles, stored email normalized', async () => {
-    const created = await users.create({ email: 'User@Example.com', passwordHash: 'hash-1' });
-    expect(created).toMatchObject({ email: 'user@example.com', roles: [Role.USER], status: UserStatus.ACTIVE });
+    const created = await users.create({
+      email: 'User@Example.com',
+      passwordHash: 'hash-1',
+    });
+    expect(created).toMatchObject({
+      email: 'user@example.com',
+      roles: [Role.USER],
+      status: UserStatus.ACTIVE,
+    });
     expect(await users.findById(created.id)).toEqual(created);
     expect(await users.findByEmail(' USER@example.com')).toEqual(created);
   });
 
   it('never returns passwordHash except from findByEmailWithCredentials', async () => {
-    const created = await users.create({ email: 'a@example.com', passwordHash: 'secret-hash' });
+    const created = await users.create({
+      email: 'a@example.com',
+      passwordHash: 'secret-hash',
+    });
     expect(await users.findById(created.id)).not.toHaveProperty('passwordHash');
-    expect(await users.findByEmail('a@example.com')).not.toHaveProperty('passwordHash');
-    expect(await users.findByEmailWithCredentials('a@example.com')).toMatchObject({
+    expect(await users.findByEmail('a@example.com')).not.toHaveProperty(
+      'passwordHash',
+    );
+    expect(
+      await users.findByEmailWithCredentials('a@example.com'),
+    ).toMatchObject({
       passwordHash: 'secret-hash',
     });
   });
 
   it('maps duplicate emails to AUTH_EMAIL_ALREADY_EXISTS (FR-REG-06/07)', async () => {
     await users.create({ email: 'dup@example.com', passwordHash: 'h' });
-    await expect(users.create({ email: 'DUP@example.com', passwordHash: 'h' })).rejects.toMatchObject({
+    await expect(
+      users.create({ email: 'DUP@example.com', passwordHash: 'h' }),
+    ).rejects.toMatchObject({
       code: 'AUTH_EMAIL_ALREADY_EXISTS',
     });
   });
 
   it('rejects a non-lowercase email at the database level (ck_users_email_lowercase)', async () => {
     await expect(
-      db.query(`INSERT INTO users (email, password_hash) VALUES ('Upper@Example.com', 'h')`),
+      db.query(
+        `INSERT INTO users (email, password_hash) VALUES ('Upper@Example.com', 'h')`,
+      ),
     ).rejects.toThrow(/ck_users_email_lowercase/);
   });
 
   it('cascades role deletion when a user is deleted', async () => {
-    const created = await users.create({ email: 'c@example.com', passwordHash: 'h', roles: [Role.ADMIN] });
+    const created = await users.create({
+      email: 'c@example.com',
+      passwordHash: 'h',
+      roles: [Role.ADMIN],
+    });
     await db.query('DELETE FROM users WHERE id = $1', [created.id]);
-    const [{ count }] = await db.query('SELECT COUNT(*)::int AS count FROM user_roles WHERE user_id = $1', [created.id]);
+    const [{ count }] = await db.query(
+      'SELECT COUNT(*)::int AS count FROM user_roles WHERE user_id = $1',
+      [created.id],
+    );
     expect(count).toBe(0);
   });
 
   it('lists with filters and keeps each user complete role list', async () => {
-    const admin = await users.create({ email: 'admin@example.com', passwordHash: 'h', roles: [Role.ADMIN] });
+    const admin = await users.create({
+      email: 'admin@example.com',
+      passwordHash: 'h',
+      roles: [Role.ADMIN],
+    });
     await users.create({ email: 'bob@example.com', passwordHash: 'h' });
     await users.create({ email: 'b_o%b@example.com', passwordHash: 'h' });
 
-    const onlyAdmins = await users.list({ page: 1, limit: 10, role: Role.ADMIN });
+    const onlyAdmins = await users.list({
+      page: 1,
+      limit: 10,
+      role: Role.ADMIN,
+    });
     expect(onlyAdmins.total).toBe(1);
-    expect(onlyAdmins.items[0]).toMatchObject({ id: admin.id, roles: [Role.USER, Role.ADMIN] });
+    expect(onlyAdmins.items[0]).toMatchObject({
+      id: admin.id,
+      roles: [Role.USER, Role.ADMIN],
+    });
 
     const search = await users.list({ page: 1, limit: 10, search: '_o%' });
     expect(search.items.map((u) => u.email)).toEqual(['b_o%b@example.com']);
@@ -74,20 +110,43 @@ describe('Users persistence (integration)', () => {
   });
 
   it('computes stats by status and role', async () => {
-    const a = await users.create({ email: 'a1@example.com', passwordHash: 'h', roles: [Role.ADMIN] });
-    const b = await users.create({ email: 'b1@example.com', passwordHash: 'h' });
+    const a = await users.create({
+      email: 'a1@example.com',
+      passwordHash: 'h',
+      roles: [Role.ADMIN],
+    });
+    const b = await users.create({
+      email: 'b1@example.com',
+      passwordHash: 'h',
+    });
     await users.updateStatus(a.id, b.id, UserStatus.SUSPENDED);
     expect(await users.getStats()).toEqual({
       total: 2,
-      byStatus: { ACTIVE: 1, INACTIVE: 0, SUSPENDED: 1, PENDING_VERIFICATION: 0 },
+      byStatus: {
+        ACTIVE: 1,
+        INACTIVE: 0,
+        SUSPENDED: 1,
+        PENDING_VERIFICATION: 0,
+      },
       byRole: { USER: 2, ADMIN: 1 },
     });
   });
 
   it('replaces roles atomically', async () => {
-    const admin = await users.create({ email: 'root@example.com', passwordHash: 'h', roles: [Role.ADMIN] });
-    const target = await users.create({ email: 't@example.com', passwordHash: 'h' });
-    expect((await users.setRoles(admin.id, target.id, [Role.ADMIN])).roles).toEqual([Role.USER, Role.ADMIN]);
-    expect((await users.setRoles(admin.id, target.id, [Role.USER])).roles).toEqual([Role.USER]);
+    const admin = await users.create({
+      email: 'root@example.com',
+      passwordHash: 'h',
+      roles: [Role.ADMIN],
+    });
+    const target = await users.create({
+      email: 't@example.com',
+      passwordHash: 'h',
+    });
+    expect(
+      (await users.setRoles(admin.id, target.id, [Role.ADMIN])).roles,
+    ).toEqual([Role.USER, Role.ADMIN]);
+    expect(
+      (await users.setRoles(admin.id, target.id, [Role.USER])).roles,
+    ).toEqual([Role.USER]);
   });
 });

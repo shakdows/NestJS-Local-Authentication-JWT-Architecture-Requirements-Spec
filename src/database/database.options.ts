@@ -9,7 +9,9 @@ export interface DatabaseSettings {
 }
 
 /** Shared TypeORM options. `synchronize` is always false (NFR-08). */
-export function buildDataSourceOptions(settings: DatabaseSettings): DataSourceOptions {
+export function buildDataSourceOptions(
+  settings: DatabaseSettings,
+): DataSourceOptions {
   return {
     type: 'postgres',
     url: settings.url,

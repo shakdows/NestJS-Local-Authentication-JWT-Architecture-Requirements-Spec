@@ -25,7 +25,12 @@ export class UserEntity {
   @Column({ name: 'email', type: 'varchar', length: 254 })
   email: string;
 
-  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
+  @Column({
+    name: 'password_hash',
+    type: 'varchar',
+    length: 255,
+    select: false,
+  })
   passwordHash: string;
 
   @Column({
@@ -46,6 +51,8 @@ export class UserEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
-  @OneToMany(() => UserRoleEntity, (userRole) => userRole.user, { cascade: ['insert'] })
+  @OneToMany(() => UserRoleEntity, (userRole) => userRole.user, {
+    cascade: ['insert'],
+  })
   roles: Relation<UserRoleEntity[]>;
 }

@@ -24,7 +24,11 @@ function setup() {
     findActiveIdentity: vi.fn(),
   };
   const users = {
-    findById: vi.fn().mockResolvedValue({ id: UID, status: UserStatus.ACTIVE, roles: [Role.USER] }),
+    findById: vi.fn().mockResolvedValue({
+      id: UID,
+      status: UserStatus.ACTIVE,
+      roles: [Role.USER],
+    }),
   };
   const tokens = { compareRefreshTokenHash: vi.fn().mockReturnValue(true) };
   const service = new SessionsService(
@@ -40,7 +44,9 @@ describe('SessionsService.validateForRefresh (JWT_SPEC §4.4)', () => {
   it('returns the refresh context for a current, usable session', async () => {
     const { service } = setup();
     await expect(service.validateForRefresh(payload, 'raw')).resolves.toEqual({
-      userId: UID, sessionId: SID, refreshToken: 'raw',
+      userId: UID,
+      sessionId: SID,
+      refreshToken: 'raw',
     });
   });
 
@@ -50,19 +56,38 @@ describe('SessionsService.validateForRefresh (JWT_SPEC §4.4)', () => {
     ['non-uuid sub', { ...payload, sub: 'x' }],
   ])('rejects %s without touching the database', async (_label, bad) => {
     const { service, repo } = setup();
-    await expect(service.validateForRefresh(bad, 'raw')).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    await expect(service.validateForRefresh(bad, 'raw')).rejects.toMatchObject({
+      code: 'AUTH_REFRESH_TOKEN_INVALID',
+    });
     expect(repo.findWithHash).not.toHaveBeenCalled();
   });
 
   it.each([
     ['unknown session', (s: Record<string, unknown>) => s, true],
-    ['revoked session', (s: Record<string, unknown>) => ({ ...s, revokedAt: new Date() }), false],
-    ['expired session', (s: Record<string, unknown>) => ({ ...s, expiresAt: new Date(Date.now() - 1) }), false],
-    ['user mismatch', (s: Record<string, unknown>) => ({ ...s, userId: 'someone-else' }), false],
+    [
+      'revoked session',
+      (s: Record<string, unknown>) => ({ ...s, revokedAt: new Date() }),
+      false,
+    ],
+    [
+      'expired session',
+      (s: Record<string, unknown>) => ({
+        ...s,
+        expiresAt: new Date(Date.now() - 1),
+      }),
+      false,
+    ],
+    [
+      'user mismatch',
+      (s: Record<string, unknown>) => ({ ...s, userId: 'someone-else' }),
+      false,
+    ],
   ])('rejects a %s with the generic 401', async (_label, mutate, missing) => {
     const { service, repo, session } = setup();
     repo.findWithHash.mockResolvedValue(missing ? null : mutate(session));
-    await expect(service.validateForRefresh(payload, 'raw')).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    await expect(
+      service.validateForRefresh(payload, 'raw'),
+    ).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
     expect(repo.revoke).not.toHaveBeenCalled();
   });
 
@@ -70,26 +95,42 @@ describe('SessionsService.validateForRefresh (JWT_SPEC §4.4)', () => {
     const { service, repo, tokens } = setup();
     tokens.compareRefreshTokenHash.mockReturnValue(false);
     const warn = service['logger'].warn as unknown as ReturnType<typeof vi.fn>;
-    await expect(service.validateForRefresh(payload, 'stolen.old.token')).rejects.toMatchObject({
+    await expect(
+      service.validateForRefresh(payload, 'stolen.old.token'),
+    ).rejects.toMatchObject({
       code: 'AUTH_REFRESH_TOKEN_INVALID',
     });
-    expect(repo.revoke).toHaveBeenCalledWith(SID, SessionRevokedReason.REUSE_DETECTED);
-    expect(warn).toHaveBeenCalledWith({ event: 'auth.refresh.reuse_detected', userId: UID, sessionId: SID });
+    expect(repo.revoke).toHaveBeenCalledWith(
+      SID,
+      SessionRevokedReason.REUSE_DETECTED,
+    );
+    expect(warn).toHaveBeenCalledWith({
+      event: 'auth.refresh.reuse_detected',
+      userId: UID,
+      sessionId: SID,
+    });
     expect(JSON.stringify(warn.mock.calls)).not.toContain('stolen.old.token');
   });
 
   it('non-active user ⇒ session revoked with USER_NOT_ACTIVE and 403', async () => {
     const { service, repo, users } = setup();
     users.findById.mockResolvedValue({ id: UID, status: UserStatus.SUSPENDED });
-    await expect(service.validateForRefresh(payload, 'raw')).rejects.toMatchObject({ code: 'AUTH_ACCOUNT_NOT_ACTIVE' });
-    expect(repo.revoke).toHaveBeenCalledWith(SID, SessionRevokedReason.USER_NOT_ACTIVE);
+    await expect(
+      service.validateForRefresh(payload, 'raw'),
+    ).rejects.toMatchObject({ code: 'AUTH_ACCOUNT_NOT_ACTIVE' });
+    expect(repo.revoke).toHaveBeenCalledWith(
+      SID,
+      SessionRevokedReason.USER_NOT_ACTIVE,
+    );
   });
 });
 
 describe('SessionsService.findActiveSessionForAccess', () => {
   it('returns null for malformed ids without querying', async () => {
     const { service, repo } = setup();
-    await expect(service.findActiveSessionForAccess('bad', UID)).resolves.toBeNull();
+    await expect(
+      service.findActiveSessionForAccess('bad', UID),
+    ).resolves.toBeNull();
     expect(repo.findActiveIdentity).not.toHaveBeenCalled();
   });
 });

@@ -15,7 +15,9 @@ export function envRequired(name: string): string {
 
 export function envInt(name: string, fallback: number): number {
   const value = process.env[name];
-  return value === undefined || value === '' ? fallback : Number.parseInt(value, 10);
+  return value === undefined || value === ''
+    ? fallback
+    : Number.parseInt(value, 10);
 }
 
 export function envBool(name: string, fallback: boolean): boolean {

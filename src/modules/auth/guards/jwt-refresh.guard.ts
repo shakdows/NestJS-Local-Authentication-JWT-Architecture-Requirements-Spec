@@ -7,7 +7,11 @@ import { AuthErrors } from '../auth.errors.js';
 
 /** Every refresh failure is the same generic 401, except a non-active account (FR-REFRESH-06). */
 export function mapRefreshTokenFailure(err: unknown): AppException {
-  if (err instanceof AppException && err.code === ErrorCode.AUTH_ACCOUNT_NOT_ACTIVE) return err;
+  if (
+    err instanceof AppException &&
+    err.code === ErrorCode.AUTH_ACCOUNT_NOT_ACTIVE
+  )
+    return err;
   return AuthErrors.refreshTokenInvalid();
 }
 

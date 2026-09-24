@@ -8,9 +8,16 @@ export function http(app: INestApplication) {
   return request(app.getHttpServer());
 }
 
-export async function register(app: INestApplication, email: string, password = PASSWORD) {
+export async function register(
+  app: INestApplication,
+  email: string,
+  password = PASSWORD,
+) {
   const res = await http(app).post('/auth/register').send({ email, password });
-  if (res.status !== 201) throw new Error(`register failed: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 201)
+    throw new Error(
+      `register failed: ${res.status} ${JSON.stringify(res.body)}`,
+    );
   return res.body.data.user as { id: string; email: string };
 }
 
@@ -20,8 +27,12 @@ export async function login(
   password = PASSWORD,
   userAgent = 'vitest-agent',
 ) {
-  const res = await http(app).post('/auth/login').set('User-Agent', userAgent).send({ email, password });
-  if (res.status !== 200) throw new Error(`login failed: ${res.status} ${JSON.stringify(res.body)}`);
+  const res = await http(app)
+    .post('/auth/login')
+    .set('User-Agent', userAgent)
+    .send({ email, password });
+  if (res.status !== 200)
+    throw new Error(`login failed: ${res.status} ${JSON.stringify(res.body)}`);
   return res.body.data as {
     user: { id: string; email: string; roles: string[] };
     accessToken: string;
@@ -34,11 +45,20 @@ export async function login(
 export async function grantAdmin(app: INestApplication, userId: string) {
   await app
     .get(DataSource)
-    .query(`INSERT INTO user_roles (user_id, role) VALUES ($1, 'ADMIN') ON CONFLICT DO NOTHING`, [userId]);
+    .query(
+      `INSERT INTO user_roles (user_id, role) VALUES ($1, 'ADMIN') ON CONFLICT DO NOTHING`,
+      [userId],
+    );
 }
 
-export async function setStatus(app: INestApplication, userId: string, status: string) {
-  await app.get(DataSource).query(`UPDATE users SET status = $2 WHERE id = $1`, [userId, status]);
+export async function setStatus(
+  app: INestApplication,
+  userId: string,
+  status: string,
+) {
+  await app
+    .get(DataSource)
+    .query(`UPDATE users SET status = $2 WHERE id = $1`, [userId, status]);
 }
 
 /** Response body without the volatile timestamp, for byte-equality comparisons. */

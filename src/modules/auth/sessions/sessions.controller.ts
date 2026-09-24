@@ -1,4 +1,13 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { uuidParam } from '../../../common/pipes/uuid-param.pipe.js';
 import { CurrentUser } from '../decorators/current-user.decorator.js';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard.js';
@@ -23,7 +32,10 @@ export class SessionsController {
   }
 
   @Delete(':id')
-  revokeOne(@CurrentUser() user: AuthenticatedUser, @Param('id', uuidParam()) id: string) {
+  revokeOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', uuidParam()) id: string,
+  ) {
     return this.userSessions.revokeOwn(user, id);
   }
 }

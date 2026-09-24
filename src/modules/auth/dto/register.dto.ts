@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import {
   EMAIL_MAX_LENGTH,
   PASSWORD_LETTER_AND_DIGIT,
@@ -14,13 +21,19 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'email is required' })
   @IsString({ message: 'email must be a string' })
   @IsEmail({}, { message: 'email must be a valid email address' })
-  @MaxLength(EMAIL_MAX_LENGTH, { message: 'email must be at most 254 characters' })
+  @MaxLength(EMAIL_MAX_LENGTH, {
+    message: 'email must be at most 254 characters',
+  })
   email: string;
 
   @IsNotEmpty({ message: 'password is required' })
   @IsString({ message: 'password must be a string' })
-  @MinLength(PASSWORD_MIN_LENGTH, { message: 'password must be at least 8 characters' })
-  @MaxLength(PASSWORD_MAX_LENGTH, { message: 'password must be at most 128 characters' })
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: 'password must be at least 8 characters',
+  })
+  @MaxLength(PASSWORD_MAX_LENGTH, {
+    message: 'password must be at most 128 characters',
+  })
   @Matches(PASSWORD_LETTER_AND_DIGIT, {
     message: 'password must contain at least one letter and one digit',
   })

@@ -12,7 +12,10 @@ import authConfig from '../../../config/auth.config.js';
 export class PasswordService implements OnModuleInit {
   private dummyHash: string | undefined;
 
-  constructor(@Inject(authConfig.KEY) private readonly config: ConfigType<typeof authConfig>) {}
+  constructor(
+    @Inject(authConfig.KEY)
+    private readonly config: ConfigType<typeof authConfig>,
+  ) {}
 
   private get options() {
     return {

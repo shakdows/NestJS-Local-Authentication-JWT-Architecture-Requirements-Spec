@@ -20,15 +20,18 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const required = this.reflector.getAllAndOverride<Role[] | undefined>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!required) return true;
 
-    const user = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>().user;
+    const user = context
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthenticatedUser }>().user;
     if (!user) throw AuthErrors.tokenMissing();
-    if (!this.rolesService.hasAnyRole(user.roles, required)) throw AuthErrors.forbidden();
+    if (!this.rolesService.hasAnyRole(user.roles, required))
+      throw AuthErrors.forbidden();
     return true;
   }
 }

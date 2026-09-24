@@ -5,7 +5,10 @@ import { AppException } from '../../common/exceptions/app.exception.js';
 /** Factories for auth errors so status, code and message never drift (AUTH_ARCHITECTURE §9). */
 export const AuthErrors = {
   invalidCredentials: () =>
-    new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_INVALID_CREDENTIALS),
+    new AppException(
+      HttpStatus.UNAUTHORIZED,
+      ErrorCode.AUTH_INVALID_CREDENTIALS,
+    ),
   emailAlreadyExists: () =>
     new AppException(HttpStatus.CONFLICT, ErrorCode.AUTH_EMAIL_ALREADY_EXISTS),
   /** `details.status` is only exposed on login, after the password was verified (AUTH_API §2.4). */
@@ -16,11 +19,19 @@ export const AuthErrors = {
       undefined,
       status ? { status } : null,
     ),
-  tokenMissing: () => new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_TOKEN_MISSING),
-  tokenInvalid: () => new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_TOKEN_INVALID),
-  tokenExpired: () => new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_TOKEN_EXPIRED),
+  tokenMissing: () =>
+    new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_TOKEN_MISSING),
+  tokenInvalid: () =>
+    new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_TOKEN_INVALID),
+  tokenExpired: () =>
+    new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_TOKEN_EXPIRED),
   refreshTokenInvalid: () =>
-    new AppException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REFRESH_TOKEN_INVALID),
-  forbidden: () => new AppException(HttpStatus.FORBIDDEN, ErrorCode.AUTH_FORBIDDEN),
-  notFound: () => new AppException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND),
+    new AppException(
+      HttpStatus.UNAUTHORIZED,
+      ErrorCode.AUTH_REFRESH_TOKEN_INVALID,
+    ),
+  forbidden: () =>
+    new AppException(HttpStatus.FORBIDDEN, ErrorCode.AUTH_FORBIDDEN),
+  notFound: () =>
+    new AppException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND),
 };

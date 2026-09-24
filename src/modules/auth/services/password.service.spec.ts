@@ -15,7 +15,9 @@ describe('PasswordService (SEC-HASH)', () => {
   });
 
   it('salts every hash (two hashes of the same password differ)', async () => {
-    expect(await service.hash('same-password-1')).not.toBe(await service.hash('same-password-1'));
+    expect(await service.hash('same-password-1')).not.toBe(
+      await service.hash('same-password-1'),
+    );
   });
 
   it('verifies the right password and rejects a wrong one', async () => {
@@ -37,7 +39,9 @@ describe('PasswordService (SEC-HASH)', () => {
   it('reports needsRehash when parameters are raised', async () => {
     const hash = await service.hash('Password123');
     expect(service.needsRehash(hash)).toBe(false);
-    const stronger = new PasswordService({ argon2: { memoryCost: 32768, timeCost: 3, parallelism: 1 } });
+    const stronger = new PasswordService({
+      argon2: { memoryCost: 32768, timeCost: 3, parallelism: 1 },
+    });
     expect(stronger.needsRehash(hash)).toBe(true);
   });
 

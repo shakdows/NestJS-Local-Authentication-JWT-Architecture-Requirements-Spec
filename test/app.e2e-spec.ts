@@ -20,10 +20,16 @@ describe('Application pipeline (e2e)', () => {
   });
 
   it('unknown routes return the error envelope with 404 RESOURCE_NOT_FOUND', async () => {
-    const res = await request(app.getHttpServer()).get('/does-not-exist').expect(404);
+    const res = await request(app.getHttpServer())
+      .get('/does-not-exist')
+      .expect(404);
     expect(res.body).toMatchObject({
       success: false,
-      error: { statusCode: 404, code: 'RESOURCE_NOT_FOUND', path: '/does-not-exist' },
+      error: {
+        statusCode: 404,
+        code: 'RESOURCE_NOT_FOUND',
+        path: '/does-not-exist',
+      },
     });
   });
 
@@ -39,7 +45,9 @@ describe('Application pipeline (e2e)', () => {
       .options('/health')
       .set('Origin', 'http://localhost:5173')
       .set('Access-Control-Request-Method', 'GET');
-    expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    expect(allowed.headers['access-control-allow-origin']).toBe(
+      'http://localhost:5173',
+    );
 
     const denied = await request(app.getHttpServer())
       .options('/health')

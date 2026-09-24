@@ -7,7 +7,9 @@ import appConfig from './config/app.config.js';
  * HTTP-level setup shared by `main.ts` and the e2e test harness, so tests exercise the
  * exact production pipeline (AUTH_ARCHITECTURE §7).
  */
-export function configureApp(app: NestExpressApplication): NestExpressApplication {
+export function configureApp(
+  app: NestExpressApplication,
+): NestExpressApplication {
   const config = app.get<ConfigType<typeof appConfig>>(appConfig.KEY);
 
   app.set('trust proxy', config.trustProxy);

@@ -6,6 +6,8 @@ describe('normalizeEmail (FR-EMAIL-01/03)', () => {
   });
 
   it('does not apply provider-specific rewriting', () => {
-    expect(normalizeEmail('First.Last+tag@Gmail.com')).toBe('first.last+tag@gmail.com');
+    expect(normalizeEmail('First.Last+tag@Gmail.com')).toBe(
+      'first.last+tag@gmail.com',
+    );
   });
 });

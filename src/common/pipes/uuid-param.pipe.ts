@@ -6,8 +6,11 @@ import { AppException } from '../exceptions/app.exception.js';
 export function uuidParam(field = 'id'): ParseUUIDPipe {
   return new ParseUUIDPipe({
     exceptionFactory: () =>
-      new AppException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, undefined, [
-        { field, messages: [`${field} must be a UUID`] },
-      ]),
+      new AppException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_FAILED,
+        undefined,
+        [{ field, messages: [`${field} must be a UUID`] }],
+      ),
   });
 }

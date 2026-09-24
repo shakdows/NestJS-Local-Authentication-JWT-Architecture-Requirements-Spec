@@ -22,7 +22,10 @@ async function main(): Promise<void> {
   } catch {
     // Use the real environment.
   }
-  if (process.env.NODE_ENV === 'production' && !process.argv.includes('--force')) {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !process.argv.includes('--force')
+  ) {
     throw new Error('Refusing to seed in production without --force');
   }
   const input = plainToInstance(RegisterDto, {
@@ -32,18 +35,28 @@ async function main(): Promise<void> {
   const errors = await validate(input);
   if (errors.length > 0) {
     const messages = errors.flatMap((e) => Object.values(e.constraints ?? {}));
-    throw new Error(`Invalid SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD: ${messages.join('; ')}`);
+    throw new Error(
+      `Invalid SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD: ${messages.join('; ')}`,
+    );
   }
 
-  const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
+  const app = await NestFactory.createApplicationContext(AppModule, {
+    logger: ['error', 'warn'],
+  });
   try {
     const users = app.get(UsersService);
     if (await users.existsByEmail(input.email)) {
       console.log('Admin user already exists; nothing to do.');
       return;
     }
-    const passwordHash = await app.get(PasswordService, { strict: false }).hash(input.password);
-    const admin = await users.create({ email: input.email, passwordHash, roles: [Role.USER, Role.ADMIN] });
+    const passwordHash = await app
+      .get(PasswordService, { strict: false })
+      .hash(input.password);
+    const admin = await users.create({
+      email: input.email,
+      passwordHash,
+      roles: [Role.USER, Role.ADMIN],
+    });
     console.log(`Created admin user ${admin.id}`);
   } finally {
     await app.close();

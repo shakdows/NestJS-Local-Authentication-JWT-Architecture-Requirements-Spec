@@ -60,7 +60,10 @@ export class AuthService {
   async login(dto: LoginDto, ctx: ClientContext): Promise<LoginResponseDto> {
     const user = await this.validateCredentials(dto.email, dto.password);
     if (this.passwordService.needsRehash(user.passwordHash)) {
-      await this.usersService.updatePasswordHash(user.id, await this.passwordService.hash(dto.password));
+      await this.usersService.updatePasswordHash(
+        user.id,
+        await this.passwordService.hash(dto.password),
+      );
     }
     const tokens = await this.issueSession(user, ctx);
     const lastLoginAt = new Date();
@@ -74,19 +77,33 @@ export class AuthService {
    * Unknown email and wrong password are indistinguishable, including timing (SEC-ENUM-01/02);
    * status is only revealed after the password is verified (SEC-ENUM-03).
    */
-  async validateCredentials(email: string, password: string): Promise<UserWithCredentials> {
+  async validateCredentials(
+    email: string,
+    password: string,
+  ): Promise<UserWithCredentials> {
     const user = await this.usersService.findByEmailWithCredentials(email);
     if (!user) {
       await this.passwordService.verifyDummy(password);
-      this.logger.warn({ event: 'auth.login.failed', reason: 'invalid_credentials' });
+      this.logger.warn({
+        event: 'auth.login.failed',
+        reason: 'invalid_credentials',
+      });
       throw AuthErrors.invalidCredentials();
     }
     if (!(await this.passwordService.verify(user.passwordHash, password))) {
-      this.logger.warn({ event: 'auth.login.failed', reason: 'invalid_credentials', userId: user.id });
+      this.logger.warn({
+        event: 'auth.login.failed',
+        reason: 'invalid_credentials',
+        userId: user.id,
+      });
       throw AuthErrors.invalidCredentials();
     }
     if (user.status !== UserStatus.ACTIVE) {
-      this.logger.warn({ event: 'auth.login.failed', reason: 'account_not_active', userId: user.id });
+      this.logger.warn({
+        event: 'auth.login.failed',
+        reason: 'account_not_active',
+        userId: user.id,
+      });
       throw AuthErrors.accountNotActive(user.status);
     }
     return user;
@@ -96,7 +113,10 @@ export class AuthService {
    * Creates a session and its first token pair. The single seam every future way of proving
    * identity (OAuth, MFA, magic link) ends with (AUTH_ARCHITECTURE §6.6).
    */
-  async issueSession(user: Pick<User, 'id' | 'email' | 'roles'>, ctx: ClientContext): Promise<TokensResponseDto> {
+  async issueSession(
+    user: Pick<User, 'id' | 'email' | 'roles'>,
+    ctx: ClientContext,
+  ): Promise<TokensResponseDto> {
     const sessionId = randomUUID();
     const tokens = await this.generateTokens(user, sessionId);
     await this.sessionsService.create({
@@ -107,7 +127,12 @@ export class AuthService {
       ipAddress: ctx.ipAddress,
       userAgent: ctx.userAgent,
     });
-    this.logger.log({ event: 'auth.login.succeeded', userId: user.id, sessionId, ip: ctx.ipAddress });
+    this.logger.log({
+      event: 'auth.login.succeeded',
+      userId: user.id,
+      sessionId,
+      ip: ctx.ipAddress,
+    });
     return this.toTokensResponse(tokens);
   }
 
@@ -126,7 +151,10 @@ export class AuthService {
       tokens.refreshExpiresAt,
     );
     if (!rotated) {
-      await this.sessionsService.revokeForReuse(refresh.sessionId, refresh.userId);
+      await this.sessionsService.revokeForReuse(
+        refresh.sessionId,
+        refresh.userId,
+      );
       throw AuthErrors.refreshTokenInvalid();
     }
     return this.toTokensResponse(tokens);
@@ -134,14 +162,24 @@ export class AuthService {
 
   /** Revokes the current session; its access and refresh tokens stop working (FR-LOGOUT-01). */
   async logout(user: AuthenticatedUser): Promise<LogoutResponseDto> {
-    const revokedSessions = await this.sessionsService.revoke(user.sessionId, SessionRevokedReason.LOGOUT);
+    const revokedSessions = await this.sessionsService.revoke(
+      user.sessionId,
+      SessionRevokedReason.LOGOUT,
+    );
     return { revokedSessions };
   }
 
   /** Revokes every active session of the user, including the current one (FR-LOGOUT-02). */
   async logoutAll(user: AuthenticatedUser): Promise<LogoutResponseDto> {
-    const revokedSessions = await this.sessionsService.revokeAllForUser(user.id, SessionRevokedReason.LOGOUT_ALL);
-    this.logger.log({ event: 'auth.logout_all', userId: user.id, revokedSessions });
+    const revokedSessions = await this.sessionsService.revokeAllForUser(
+      user.id,
+      SessionRevokedReason.LOGOUT_ALL,
+    );
+    this.logger.log({
+      event: 'auth.logout_all',
+      userId: user.id,
+      revokedSessions,
+    });
     return { revokedSessions };
   }
 
@@ -152,13 +190,29 @@ export class AuthService {
     return { user: toUserResponse(user) };
   }
 
-  private async generateTokens(user: Pick<User, 'id' | 'email' | 'roles'>, sessionId: string) {
-    const accessToken = await this.tokenService.signAccessToken(user, sessionId);
-    const refresh = await this.tokenService.signRefreshToken(user.id, sessionId);
-    return { accessToken, refreshToken: refresh.token, refreshExpiresAt: refresh.expiresAt };
+  private async generateTokens(
+    user: Pick<User, 'id' | 'email' | 'roles'>,
+    sessionId: string,
+  ) {
+    const accessToken = await this.tokenService.signAccessToken(
+      user,
+      sessionId,
+    );
+    const refresh = await this.tokenService.signRefreshToken(
+      user.id,
+      sessionId,
+    );
+    return {
+      accessToken,
+      refreshToken: refresh.token,
+      refreshExpiresAt: refresh.expiresAt,
+    };
   }
 
-  private toTokensResponse(tokens: { accessToken: string; refreshToken: string }): TokensResponseDto {
+  private toTokensResponse(tokens: {
+    accessToken: string;
+    refreshToken: string;
+  }): TokensResponseDto {
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

@@ -17,14 +17,25 @@ describe('toUserResponse (SEC-PWD-03)', () => {
 
   it('returns exactly the public fields, never the password hash', () => {
     const response = toUserResponse(user);
-    expect(Object.keys(response).sort()).toEqual(
-      ['createdAt', 'email', 'id', 'lastLoginAt', 'roles', 'status', 'updatedAt'],
-    );
+    expect(Object.keys(response).sort()).toEqual([
+      'createdAt',
+      'email',
+      'id',
+      'lastLoginAt',
+      'roles',
+      'status',
+      'updatedAt',
+    ]);
     expect(JSON.stringify(response)).not.toContain('argon2');
   });
 
   it('serializes dates as ISO strings', () => {
-    expect(toUserResponse({ ...user, lastLoginAt: new Date('2026-09-24T12:00:00.000Z') })).toMatchObject({
+    expect(
+      toUserResponse({
+        ...user,
+        lastLoginAt: new Date('2026-09-24T12:00:00.000Z'),
+      }),
+    ).toMatchObject({
       lastLoginAt: '2026-09-24T12:00:00.000Z',
       createdAt: '2026-09-01T08:30:00.000Z',
     });

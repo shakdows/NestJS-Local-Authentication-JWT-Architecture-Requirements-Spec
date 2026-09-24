@@ -11,9 +11,12 @@ describe('parseDurationToSeconds', () => {
     expect(parseDurationToSeconds(input)).toBe(expected);
   });
 
-  it.each(['', '15', 'm', '15w', '-1m', '1.5h', ' 15m'])('rejects %j', (input) => {
-    expect(() => parseDurationToSeconds(input)).toThrow();
-  });
+  it.each(['', '15', 'm', '15w', '-1m', '1.5h', ' 15m'])(
+    'rejects %j',
+    (input) => {
+      expect(() => parseDurationToSeconds(input)).toThrow();
+    },
+  );
 
   it('rejects zero', () => {
     expect(() => parseDurationToSeconds('0s')).toThrow(/greater than zero/);

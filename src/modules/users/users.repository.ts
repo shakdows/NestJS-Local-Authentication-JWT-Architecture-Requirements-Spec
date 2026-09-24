@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, QueryFailedError, Repository, SelectQueryBuilder } from 'typeorm';
+import {
+  DataSource,
+  QueryFailedError,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { Role, ROLE_ORDER } from '../roles/role.enum.js';
 import { UserRoleEntity } from './entities/user-role.entity.js';
 import { UserEntity } from './entities/user.entity.js';
@@ -18,7 +23,9 @@ const UNIQUE_VIOLATION = '23505';
 const EMAIL_UNIQUE_CONSTRAINT = 'uq_users_email';
 
 function sortRoles(roles: Role[]): Role[] {
-  return [...new Set(roles)].sort((a, b) => ROLE_ORDER.indexOf(a) - ROLE_ORDER.indexOf(b));
+  return [...new Set(roles)].sort(
+    (a, b) => ROLE_ORDER.indexOf(a) - ROLE_ORDER.indexOf(b),
+  );
 }
 
 function toUser(entity: UserEntity): User {
@@ -35,8 +42,14 @@ function toUser(entity: UserEntity): User {
 
 function isEmailUniqueViolation(error: unknown): boolean {
   if (!(error instanceof QueryFailedError)) return false;
-  const driverError = error.driverError as { code?: string; constraint?: string };
-  return driverError.code === UNIQUE_VIOLATION && driverError.constraint === EMAIL_UNIQUE_CONSTRAINT;
+  const driverError = error.driverError as {
+    code?: string;
+    constraint?: string;
+  };
+  return (
+    driverError.code === UNIQUE_VIOLATION &&
+    driverError.constraint === EMAIL_UNIQUE_CONSTRAINT
+  );
 }
 
 /** Escapes LIKE wildcards so user-supplied search text is matched literally. */
@@ -52,30 +65,41 @@ function escapeLike(value: string): string {
 @Injectable()
 export class UsersRepository {
   constructor(
-    @InjectRepository(UserEntity) private readonly users: Repository<UserEntity>,
+    @InjectRepository(UserEntity)
+    private readonly users: Repository<UserEntity>,
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   private baseQuery(): SelectQueryBuilder<UserEntity> {
-    return this.users.createQueryBuilder('user').leftJoinAndSelect('user.roles', 'role');
+    return this.users
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'role');
   }
 
   async findById(id: string): Promise<User | null> {
-    const entity = await this.baseQuery().where('user.id = :id', { id }).getOne();
+    const entity = await this.baseQuery()
+      .where('user.id = :id', { id })
+      .getOne();
     return entity ? toUser(entity) : null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const entity = await this.baseQuery().where('user.email = :email', { email }).getOne();
+    const entity = await this.baseQuery()
+      .where('user.email = :email', { email })
+      .getOne();
     return entity ? toUser(entity) : null;
   }
 
-  async findByEmailWithCredentials(email: string): Promise<UserWithCredentials | null> {
+  async findByEmailWithCredentials(
+    email: string,
+  ): Promise<UserWithCredentials | null> {
     const entity = await this.baseQuery()
       .addSelect('user.passwordHash')
       .where('user.email = :email', { email })
       .getOne();
-    return entity ? { ...toUser(entity), passwordHash: entity.passwordHash } : null;
+    return entity
+      ? { ...toUser(entity), passwordHash: entity.passwordHash }
+      : null;
   }
 
   async existsByEmail(email: string): Promise<boolean> {
@@ -133,9 +157,12 @@ export class UsersRepository {
   async list(query: ListUsersQuery): Promise<{ items: User[]; total: number }> {
     // Filter on ids first so the role join does not truncate each user's role list.
     const ids = this.users.createQueryBuilder('u').select('u.id');
-    if (query.status) ids.andWhere('u.status = :status', { status: query.status });
+    if (query.status)
+      ids.andWhere('u.status = :status', { status: query.status });
     if (query.search) {
-      ids.andWhere(`u.email ILIKE :search ESCAPE '\\'`, { search: `%${escapeLike(query.search)}%` });
+      ids.andWhere(`u.email ILIKE :search ESCAPE '\\'`, {
+        search: `%${escapeLike(query.search)}%`,
+      });
     }
     if (query.role) {
       ids.andWhere(
@@ -164,7 +191,9 @@ export class UsersRepository {
     const byStatus = Object.fromEntries(
       Object.values(UserStatus).map((status) => [status, 0]),
     ) as Record<UserStatus, number>;
-    const byRole = Object.fromEntries(ROLE_ORDER.map((role) => [role, 0])) as Record<Role, number>;
+    const byRole = Object.fromEntries(
+      ROLE_ORDER.map((role) => [role, 0]),
+    ) as Record<Role, number>;
 
     const statusRows: { status: UserStatus; count: string }[] = await this.users
       .createQueryBuilder('u')

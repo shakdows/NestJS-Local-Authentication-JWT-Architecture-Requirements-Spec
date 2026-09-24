@@ -10,7 +10,9 @@ export const DURATION_PATTERN = /^(\d+)([smhd])$/;
 export function parseDurationToSeconds(value: string): number {
   const match = DURATION_PATTERN.exec(value);
   if (!match) {
-    throw new Error(`Invalid duration "${value}". Expected e.g. 900s, 15m, 1h, 7d`);
+    throw new Error(
+      `Invalid duration "${value}". Expected e.g. 900s, 15m, 1h, 7d`,
+    );
   }
   const amount = Number(match[1]);
   if (amount <= 0) {

@@ -28,7 +28,13 @@ import { UsersModule } from './modules/users/users.module.js';
       imports: [ConfigModule],
       inject: [appConfig.KEY],
       useFactory: (app: ConfigType<typeof appConfig>) => ({
-        throttlers: [{ name: 'default', ttl: app.throttle.ttlSeconds * 1000, limit: app.throttle.limit }],
+        throttlers: [
+          {
+            name: 'default',
+            ttl: app.throttle.ttlSeconds * 1000,
+            limit: app.throttle.limit,
+          },
+        ],
         skipIf: () => !app.throttle.enabled,
       }),
     }),

@@ -4,8 +4,14 @@ import { ENV_DEFAULTS } from './env.validation.js';
 import { envRequired, envString } from './env.util.js';
 
 export default registerAs('jwt', () => {
-  const accessExpiresIn = envString('JWT_ACCESS_EXPIRES_IN', ENV_DEFAULTS.JWT_ACCESS_EXPIRES_IN);
-  const refreshExpiresIn = envString('JWT_REFRESH_EXPIRES_IN', ENV_DEFAULTS.JWT_REFRESH_EXPIRES_IN);
+  const accessExpiresIn = envString(
+    'JWT_ACCESS_EXPIRES_IN',
+    ENV_DEFAULTS.JWT_ACCESS_EXPIRES_IN,
+  );
+  const refreshExpiresIn = envString(
+    'JWT_REFRESH_EXPIRES_IN',
+    ENV_DEFAULTS.JWT_REFRESH_EXPIRES_IN,
+  );
   return {
     access: {
       secret: envRequired('JWT_ACCESS_SECRET'),

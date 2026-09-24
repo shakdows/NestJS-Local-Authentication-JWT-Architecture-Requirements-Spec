@@ -24,14 +24,23 @@ export class UserSessionsService {
   ) {}
 
   /** The caller's usable sessions, flagging the current one (FR-S-01). */
-  async listOwn(user: AuthenticatedUser): Promise<{ items: SessionResponseDto[] }> {
+  async listOwn(
+    user: AuthenticatedUser,
+  ): Promise<{ items: SessionResponseDto[] }> {
     const sessions = await this.sessionsService.listActiveForUser(user.id);
     return { items: sessions.map((s) => toSessionResponse(s, user.sessionId)) };
   }
 
   /** Revokes one of the caller's sessions; foreign/unknown ids are 404 (FR-S-02, SEC-SESS-04). */
-  async revokeOwn(user: AuthenticatedUser, sessionId: string): Promise<LogoutResponseDto> {
-    const revokedSessions = await this.sessionsService.revokeOwned(user.id, sessionId, SessionRevokedReason.LOGOUT);
+  async revokeOwn(
+    user: AuthenticatedUser,
+    sessionId: string,
+  ): Promise<LogoutResponseDto> {
+    const revokedSessions = await this.sessionsService.revokeOwned(
+      user.id,
+      sessionId,
+      SessionRevokedReason.LOGOUT,
+    );
     if (revokedSessions === 0) throw AuthErrors.notFound();
     return { revokedSessions };
   }
@@ -47,7 +56,9 @@ export class UserSessionsService {
   }
 
   /** Admin: a user's usable sessions (FR-ADMIN-07). 404 for unknown users. */
-  async listForUser(userId: string): Promise<{ items: AdminSessionResponseDto[] }> {
+  async listForUser(
+    userId: string,
+  ): Promise<{ items: AdminSessionResponseDto[] }> {
     await this.usersService.getByIdOrFail(userId);
     const sessions = await this.sessionsService.listActiveForUser(userId);
     return { items: sessions.map(toAdminSessionResponse) };
@@ -56,7 +67,10 @@ export class UserSessionsService {
   /** Admin: revokes every session of a user with ADMIN_REVOKED (FR-ADMIN-07). */
   async revokeAllForUser(userId: string): Promise<LogoutResponseDto> {
     await this.usersService.getByIdOrFail(userId);
-    const revokedSessions = await this.sessionsService.revokeAllForUser(userId, SessionRevokedReason.ADMIN_REVOKED);
+    const revokedSessions = await this.sessionsService.revokeAllForUser(
+      userId,
+      SessionRevokedReason.ADMIN_REVOKED,
+    );
     return { revokedSessions };
   }
 }

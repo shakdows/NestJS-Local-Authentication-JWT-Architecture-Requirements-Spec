@@ -12,7 +12,10 @@ function createHost() {
   };
   const request = { path: '/auth/login' };
   const host = {
-    switchToHttp: () => ({ getResponse: () => response, getRequest: () => request }),
+    switchToHttp: () => ({
+      getResponse: () => response,
+      getRequest: () => request,
+    }),
   } as unknown as ArgumentsHost;
   return { host, response };
 }
@@ -23,9 +26,12 @@ describe('AllExceptionsFilter (FR-ERR)', () => {
   it('renders AppException with its code, message and details', () => {
     const { host, response } = createHost();
     filter.catch(
-      new AppException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, undefined, [
-        { field: 'email', messages: ['x'] },
-      ]),
+      new AppException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_FAILED,
+        undefined,
+        [{ field: 'email', messages: ['x'] }],
+      ),
       host,
     );
     expect(response.status).toHaveBeenCalledWith(400);
@@ -41,7 +47,10 @@ describe('AllExceptionsFilter (FR-ERR)', () => {
       },
     });
     expect(typeof body.error.timestamp).toBe('string');
-    expect(response.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'no-store',
+    );
   });
 
   it('maps Nest HttpExceptions by status', () => {
@@ -68,11 +77,16 @@ describe('AllExceptionsFilter (FR-ERR)', () => {
 
   it('hides unknown errors behind a generic 500 without stack or message', () => {
     const { host, response } = createHost();
-    const logSpy = vi.spyOn(filter['logger'], 'error').mockImplementation(() => undefined);
+    const logSpy = vi
+      .spyOn(filter['logger'], 'error')
+      .mockImplementation(() => undefined);
     filter.catch(new Error('relation "users" does not exist'), host);
     const body = response.json.mock.calls[0][0];
     expect(response.status).toHaveBeenCalledWith(500);
-    expect(body.error).toMatchObject({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+    expect(body.error).toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Internal server error',
+    });
     expect(JSON.stringify(body)).not.toContain('relation');
     expect(logSpy).toHaveBeenCalled();
   });

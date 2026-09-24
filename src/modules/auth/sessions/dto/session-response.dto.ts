@@ -14,7 +14,9 @@ export class SessionResponseDto {
 /** A session as shown to an administrator (AUTH_API §3.15): same fields minus `current`. */
 export type AdminSessionResponseDto = Omit<SessionResponseDto, 'current'>;
 
-export function toAdminSessionResponse(session: AuthSession): AdminSessionResponseDto {
+export function toAdminSessionResponse(
+  session: AuthSession,
+): AdminSessionResponseDto {
   return {
     id: session.id,
     ipAddress: session.ipAddress,
@@ -25,6 +27,12 @@ export function toAdminSessionResponse(session: AuthSession): AdminSessionRespon
   };
 }
 
-export function toSessionResponse(session: AuthSession, currentSessionId: string): SessionResponseDto {
-  return { ...toAdminSessionResponse(session), current: session.id === currentSessionId };
+export function toSessionResponse(
+  session: AuthSession,
+  currentSessionId: string,
+): SessionResponseDto {
+  return {
+    ...toAdminSessionResponse(session),
+    current: session.id === currentSessionId,
+  };
 }

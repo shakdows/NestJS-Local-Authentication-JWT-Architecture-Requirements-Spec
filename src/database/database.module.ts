@@ -9,7 +9,8 @@ import { buildDataSourceOptions } from './database.options.js';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule.forFeature(databaseConfig)],
       inject: [databaseConfig.KEY],
-      useFactory: (db: ConfigType<typeof databaseConfig>) => buildDataSourceOptions(db),
+      useFactory: (db: ConfigType<typeof databaseConfig>) =>
+        buildDataSourceOptions(db),
     }),
   ],
 })

@@ -8,7 +8,9 @@ export class InitUsersAndRoles1790000000000 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TYPE "user_status" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION')`,
     );
-    await queryRunner.query(`CREATE TYPE "user_role" AS ENUM ('USER', 'ADMIN')`);
+    await queryRunner.query(
+      `CREATE TYPE "user_role" AS ENUM ('USER', 'ADMIN')`,
+    );
 
     await queryRunner.query(`
       CREATE TABLE "users" (
@@ -23,7 +25,9 @@ export class InitUsersAndRoles1790000000000 implements MigrationInterface {
         CONSTRAINT "uq_users_email" UNIQUE ("email"),
         CONSTRAINT "ck_users_email_lowercase" CHECK ("email" = lower("email"))
       )`);
-    await queryRunner.query(`CREATE INDEX "idx_users_status" ON "users" ("status")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_users_status" ON "users" ("status")`,
+    );
 
     await queryRunner.query(`
       CREATE TABLE "user_roles" (
@@ -34,7 +38,9 @@ export class InitUsersAndRoles1790000000000 implements MigrationInterface {
         CONSTRAINT "fk_user_roles_user" FOREIGN KEY ("user_id")
           REFERENCES "users" ("id") ON DELETE CASCADE
       )`);
-    await queryRunner.query(`CREATE INDEX "idx_user_roles_role" ON "user_roles" ("role")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_user_roles_role" ON "user_roles" ("role")`,
+    );
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

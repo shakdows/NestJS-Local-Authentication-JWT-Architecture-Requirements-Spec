@@ -4,7 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import jwtConfig from '../../../config/jwt.config.js';
 import type { User } from '../../users/types/user.types.js';
-import type { AccessTokenPayload, RefreshTokenPayload } from '../interfaces/jwt-payload.interface.js';
+import type {
+  AccessTokenPayload,
+  RefreshTokenPayload,
+} from '../interfaces/jwt-payload.interface.js';
 
 const ALGORITHM = 'HS256';
 
@@ -16,7 +19,8 @@ const ALGORITHM = 'HS256';
 export class TokenService {
   constructor(
     private readonly jwtService: JwtService,
-    @Inject(jwtConfig.KEY) private readonly config: ConfigType<typeof jwtConfig>,
+    @Inject(jwtConfig.KEY)
+    private readonly config: ConfigType<typeof jwtConfig>,
   ) {}
 
   /** Access-token lifetime in seconds (`expiresIn` in API responses). */
@@ -25,7 +29,10 @@ export class TokenService {
   }
 
   /** Signs an access token bound to `sessionId` with exactly the JWT_SPEC §3.1 claims. */
-  signAccessToken(user: Pick<User, 'id' | 'email' | 'roles'>, sessionId: string): Promise<string> {
+  signAccessToken(
+    user: Pick<User, 'id' | 'email' | 'roles'>,
+    sessionId: string,
+  ): Promise<string> {
     const payload: AccessTokenPayload = {
       sub: user.id,
       email: user.email,
@@ -46,7 +53,10 @@ export class TokenService {
    * Signs a refresh token with a fresh `jti`. `iat` is set explicitly so the returned
    * `expiresAt` equals the token's `exp` exactly (stored as `auth_sessions.expires_at`).
    */
-  async signRefreshToken(userId: string, sessionId: string): Promise<{ token: string; expiresAt: Date }> {
+  async signRefreshToken(
+    userId: string,
+    sessionId: string,
+  ): Promise<{ token: string; expiresAt: Date }> {
     const iat = Math.floor(Date.now() / 1000);
     const payload: RefreshTokenPayload = {
       sub: userId,
@@ -62,7 +72,10 @@ export class TokenService {
       audience: this.config.audience,
       algorithm: ALGORITHM,
     });
-    return { token, expiresAt: new Date((iat + this.config.refresh.ttlSeconds) * 1000) };
+    return {
+      token,
+      expiresAt: new Date((iat + this.config.refresh.ttlSeconds) * 1000),
+    };
   }
 
   /** SHA-256 lowercase hex. Never bcrypt: it truncates at 72 bytes (SEC-TOKEN-04). */
@@ -74,6 +87,8 @@ export class TokenService {
   compareRefreshTokenHash(token: string, storedHash: string): boolean {
     const presented = Buffer.from(this.hashRefreshToken(token), 'hex');
     const stored = Buffer.from(storedHash, 'hex');
-    return presented.length === stored.length && timingSafeEqual(presented, stored);
+    return (
+      presented.length === stored.length && timingSafeEqual(presented, stored)
+    );
   }
 }

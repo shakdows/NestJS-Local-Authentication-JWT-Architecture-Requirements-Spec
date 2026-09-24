@@ -4,7 +4,9 @@
  */
 export const TEST_ENV: Record<string, string> = {
   NODE_ENV: 'test',
-  DATABASE_URL: process.env.TEST_DATABASE_URL ?? 'postgresql://app:app@localhost:5432/auth_test',
+  DATABASE_URL:
+    process.env.TEST_DATABASE_URL ??
+    'postgresql://app:app@localhost:5432/auth_test',
   JWT_ACCESS_SECRET: 'test-only-access-secret-0123456789abcdefghijklmnop',
   JWT_REFRESH_SECRET: 'test-only-refresh-secret-0123456789abcdefghijklmnop',
   JWT_ACCESS_EXPIRES_IN: '15m',

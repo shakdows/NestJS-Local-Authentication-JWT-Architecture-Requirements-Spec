@@ -20,8 +20,13 @@ describe('POST /auth/refresh (e2e)', () => {
   beforeEach(() => resetDatabase(app));
   afterAll(() => app.close());
 
-  const refresh = (refreshToken?: unknown, extra: Record<string, unknown> = {}) =>
-    http(app).post('/auth/refresh').send({ refreshToken, ...extra });
+  const refresh = (
+    refreshToken?: unknown,
+    extra: Record<string, unknown> = {},
+  ) =>
+    http(app)
+      .post('/auth/refresh')
+      .send({ refreshToken, ...extra });
 
   async function start() {
     const user = await register(app, 'user@example.com');
@@ -37,12 +42,22 @@ describe('POST /auth/refresh (e2e)', () => {
     const { tokens } = await start();
     const res = await refresh(tokens.refreshToken).expect(200);
     const data = res.body.data;
-    expect(Object.keys(data).sort()).toEqual(['accessToken', 'expiresIn', 'refreshToken', 'tokenType']);
+    expect(Object.keys(data).sort()).toEqual([
+      'accessToken',
+      'expiresIn',
+      'refreshToken',
+      'tokenType',
+    ]);
     expect(data).toMatchObject({ tokenType: 'Bearer', expiresIn: 900 });
     expect(data.refreshToken).not.toBe(tokens.refreshToken);
     // Access tokens have no jti (JWT_SPEC §3.1), so one issued in the same second may be identical.
-    expect(decode<{ sid: string }>(data.accessToken).sid).toBe(decode<{ sid: string }>(tokens.accessToken).sid);
-    await http(app).get('/auth/me').set('Authorization', `Bearer ${data.accessToken}`).expect(200);
+    expect(decode<{ sid: string }>(data.accessToken).sid).toBe(
+      decode<{ sid: string }>(tokens.accessToken).sid,
+    );
+    await http(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${data.accessToken}`)
+      .expect(200);
   });
 
   it('rotation: RT1 → RT2 → RT3, hash replaced each time, sid stable, expiry moves forward', async () => {
@@ -50,16 +65,21 @@ describe('POST /auth/refresh (e2e)', () => {
     const before = await sessionRow(sid);
     expect(before.refresh_token_hash).toBe(sha256(tokens.refreshToken));
 
-    const rt2 = (await refresh(tokens.refreshToken).expect(200)).body.data.refreshToken;
+    const rt2 = (await refresh(tokens.refreshToken).expect(200)).body.data
+      .refreshToken;
     const afterFirst = await sessionRow(sid);
     expect(afterFirst.refresh_token_hash).toBe(sha256(rt2));
     expect(afterFirst.last_used_at).not.toBeNull();
-    expect(new Date(afterFirst.expires_at).getTime()).toBeGreaterThanOrEqual(new Date(before.expires_at).getTime());
+    expect(new Date(afterFirst.expires_at).getTime()).toBeGreaterThanOrEqual(
+      new Date(before.expires_at).getTime(),
+    );
     expect(decode<{ sid: string }>(rt2).sid).toBe(sid);
 
     const rt3 = (await refresh(rt2).expect(200)).body.data.refreshToken;
     expect((await sessionRow(sid)).refresh_token_hash).toBe(sha256(rt3));
-    const [{ count }] = await db.query('SELECT COUNT(*)::int AS count FROM auth_sessions');
+    const [{ count }] = await db.query(
+      'SELECT COUNT(*)::int AS count FROM auth_sessions',
+    );
     expect(count).toBe(1);
   });
 
@@ -74,7 +94,10 @@ describe('POST /auth/refresh (e2e)', () => {
     expect(row.revoked_reason).toBe('REUSE_DETECTED');
     expect(row.revoked_at).not.toBeNull();
     await refresh(second.refreshToken).expect(401);
-    await http(app).get('/auth/me').set('Authorization', `Bearer ${second.accessToken}`).expect(401);
+    await http(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${second.accessToken}`)
+      .expect(401);
   });
 
   it('reuse detection is per session: other devices keep working', async () => {
@@ -87,7 +110,9 @@ describe('POST /auth/refresh (e2e)', () => {
 
   it('concurrent refreshes with the same token → exactly one 200, session ends revoked (strict D-08)', async () => {
     const { tokens, sid } = await start();
-    const results = await Promise.all([1, 2, 3].map(() => refresh(tokens.refreshToken)));
+    const results = await Promise.all(
+      [1, 2, 3].map(() => refresh(tokens.refreshToken)),
+    );
     const statuses = results.map((r) => r.status).sort();
     expect(statuses.filter((s) => s === 200).length).toBeLessThanOrEqual(1);
     expect(statuses.every((s) => s === 200 || s === 401)).toBe(true);
@@ -97,19 +122,30 @@ describe('POST /auth/refresh (e2e)', () => {
   it('expired refresh token → 401', async () => {
     const { tokens } = await start();
     const claims = decode<Record<string, unknown>>(tokens.refreshToken);
-    const res = await refresh(forgeExpired({ ...claims, iat: undefined, exp: undefined }, TEST_ENV.JWT_REFRESH_SECRET)).expect(401);
+    const res = await refresh(
+      forgeExpired(
+        { ...claims, iat: undefined, exp: undefined },
+        TEST_ENV.JWT_REFRESH_SECRET,
+      ),
+    ).expect(401);
     expect(res.body.error.code).toBe('AUTH_REFRESH_TOKEN_INVALID');
   });
 
   it('expired session in the DB → 401', async () => {
     const { tokens, sid } = await start();
-    await db.query(`UPDATE auth_sessions SET expires_at = now() - interval '1 second' WHERE id = $1`, [sid]);
+    await db.query(
+      `UPDATE auth_sessions SET expires_at = now() - interval '1 second' WHERE id = $1`,
+      [sid],
+    );
     await refresh(tokens.refreshToken).expect(401);
   });
 
   it('revoked token → 401', async () => {
     const { tokens, sid } = await start();
-    await db.query(`UPDATE auth_sessions SET revoked_at = now(), revoked_reason = 'LOGOUT' WHERE id = $1`, [sid]);
+    await db.query(
+      `UPDATE auth_sessions SET revoked_at = now(), revoked_reason = 'LOGOUT' WHERE id = $1`,
+      [sid],
+    );
     const res = await refresh(tokens.refreshToken).expect(401);
     expect(res.body.error.code).toBe('AUTH_REFRESH_TOKEN_INVALID');
     expect((await sessionRow(sid)).revoked_reason).toBe('LOGOUT');
@@ -123,14 +159,19 @@ describe('POST /auth/refresh (e2e)', () => {
   it('refresh-type claims signed with the ACCESS secret → 401', async () => {
     const { tokens } = await start();
     const claims = decode<Record<string, unknown>>(tokens.refreshToken);
-    await refresh(forge({ ...claims, iat: undefined, exp: undefined })).expect(401);
+    await refresh(forge({ ...claims, iat: undefined, exp: undefined })).expect(
+      401,
+    );
   });
 
   it('forged token for a real session with a valid signature but unknown jti → reuse → revoked', async () => {
     // Simulates a leaked refresh secret: signature valid but hash not current.
     const { tokens, sid } = await start();
     const claims = decode<Record<string, unknown>>(tokens.refreshToken);
-    const forged = forge({ ...claims, jti: 'forged', iat: undefined, exp: undefined }, TEST_ENV.JWT_REFRESH_SECRET);
+    const forged = forge(
+      { ...claims, jti: 'forged', iat: undefined, exp: undefined },
+      TEST_ENV.JWT_REFRESH_SECRET,
+    );
     await refresh(forged).expect(401);
     expect((await sessionRow(sid)).revoked_reason).toBe('REUSE_DETECTED');
   });
@@ -140,10 +181,13 @@ describe('POST /auth/refresh (e2e)', () => {
     ['empty', ''],
     ['not a JWT', 'abc'],
     ['number', 42],
-  ])('%s refreshToken → 401 AUTH_REFRESH_TOKEN_INVALID (guard runs before validation)', async (_l, value) => {
-    const res = await refresh(value).expect(401);
-    expect(res.body.error.code).toBe('AUTH_REFRESH_TOKEN_INVALID');
-  });
+  ])(
+    '%s refreshToken → 401 AUTH_REFRESH_TOKEN_INVALID (guard runs before validation)',
+    async (_l, value) => {
+      const res = await refresh(value).expect(401);
+      expect(res.body.error.code).toBe('AUTH_REFRESH_TOKEN_INVALID');
+    },
+  );
 
   it('extra body fields → 400 VALIDATION_FAILED', async () => {
     const { tokens } = await start();
@@ -163,8 +207,15 @@ describe('POST /auth/refresh (e2e)', () => {
 
   it('new roles are carried by tokens issued on refresh', async () => {
     const { user, tokens } = await start();
-    await db.query(`INSERT INTO user_roles (user_id, role) VALUES ($1, 'ADMIN')`, [user.id]);
-    const { accessToken } = (await refresh(tokens.refreshToken).expect(200)).body.data;
-    expect(decode<{ roles: string[] }>(accessToken).roles).toEqual(['USER', 'ADMIN']);
+    await db.query(
+      `INSERT INTO user_roles (user_id, role) VALUES ($1, 'ADMIN')`,
+      [user.id],
+    );
+    const { accessToken } = (await refresh(tokens.refreshToken).expect(200))
+      .body.data;
+    expect(decode<{ roles: string[] }>(accessToken).roles).toEqual([
+      'USER',
+      'ADMIN',
+    ]);
   });
 });

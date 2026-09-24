@@ -24,7 +24,9 @@ function setup() {
     existsByEmail: vi.fn().mockResolvedValue(false),
     create: vi.fn().mockResolvedValue(user),
     findById: vi.fn().mockResolvedValue(user),
-    findByEmailWithCredentials: vi.fn().mockResolvedValue({ ...user, passwordHash: 'stored-hash' }),
+    findByEmailWithCredentials: vi
+      .fn()
+      .mockResolvedValue({ ...user, passwordHash: 'stored-hash' }),
     updateLastLoginAt: vi.fn(),
     updatePasswordHash: vi.fn(),
   };
@@ -36,7 +38,10 @@ function setup() {
   };
   const tokens = {
     signAccessToken: vi.fn().mockResolvedValue('access.jwt'),
-    signRefreshToken: vi.fn().mockResolvedValue({ token: 'refresh.jwt', expiresAt: new Date('2026-02-01T00:00:00Z') }),
+    signRefreshToken: vi.fn().mockResolvedValue({
+      token: 'refresh.jwt',
+      expiresAt: new Date('2026-02-01T00:00:00Z'),
+    }),
     hashRefreshToken: vi.fn((t: string) => `sha256(${t})`),
     accessTokenTtlSeconds: 900,
   };
@@ -61,7 +66,9 @@ describe('AuthService', () => {
     it('rejects an existing email with 409 before hashing', async () => {
       const { service, users, passwords } = setup();
       users.existsByEmail.mockResolvedValue(true);
-      await expect(service.register({ email: 'user@example.com', password: 'Password1' })).rejects.toMatchObject({
+      await expect(
+        service.register({ email: 'user@example.com', password: 'Password1' }),
+      ).rejects.toMatchObject({
         code: 'AUTH_EMAIL_ALREADY_EXISTS',
       });
       expect(passwords.hash).not.toHaveBeenCalled();
@@ -69,7 +76,10 @@ describe('AuthService', () => {
 
     it('hashes the password and creates a USER/ACTIVE account', async () => {
       const { service, users, passwords } = setup();
-      const result = await service.register({ email: 'user@example.com', password: 'Password1' });
+      const result = await service.register({
+        email: 'user@example.com',
+        password: 'Password1',
+      });
       expect(passwords.hash).toHaveBeenCalledWith('Password1');
       expect(users.create).toHaveBeenCalledWith({
         email: 'user@example.com',
@@ -85,7 +95,9 @@ describe('AuthService', () => {
     it('runs a dummy verify for an unknown email and returns 401', async () => {
       const { service, users, passwords } = setup();
       users.findByEmailWithCredentials.mockResolvedValue(null);
-      await expect(service.validateCredentials('nobody@example.com', 'x')).rejects.toMatchObject({
+      await expect(
+        service.validateCredentials('nobody@example.com', 'x'),
+      ).rejects.toMatchObject({
         code: 'AUTH_INVALID_CREDENTIALS',
       });
       expect(passwords.verifyDummy).toHaveBeenCalledWith('x');
@@ -94,7 +106,9 @@ describe('AuthService', () => {
     it('returns the same 401 for a wrong password', async () => {
       const { service, passwords } = setup();
       passwords.verify.mockResolvedValue(false);
-      await expect(service.validateCredentials('user@example.com', 'wrong')).rejects.toMatchObject({
+      await expect(
+        service.validateCredentials('user@example.com', 'wrong'),
+      ).rejects.toMatchObject({
         code: 'AUTH_INVALID_CREDENTIALS',
         message: 'Invalid email or password',
       });
@@ -102,17 +116,29 @@ describe('AuthService', () => {
 
     it('checks status only after the password: inactive + wrong password → 401', async () => {
       const { service, users, passwords } = setup();
-      users.findByEmailWithCredentials.mockResolvedValue({ ...user, status: UserStatus.SUSPENDED, passwordHash: 'h' });
+      users.findByEmailWithCredentials.mockResolvedValue({
+        ...user,
+        status: UserStatus.SUSPENDED,
+        passwordHash: 'h',
+      });
       passwords.verify.mockResolvedValue(false);
-      await expect(service.validateCredentials('user@example.com', 'wrong')).rejects.toMatchObject({
+      await expect(
+        service.validateCredentials('user@example.com', 'wrong'),
+      ).rejects.toMatchObject({
         code: 'AUTH_INVALID_CREDENTIALS',
       });
     });
 
     it('inactive + correct password → 403 with the status in details', async () => {
       const { service, users } = setup();
-      users.findByEmailWithCredentials.mockResolvedValue({ ...user, status: UserStatus.SUSPENDED, passwordHash: 'h' });
-      await expect(service.validateCredentials('user@example.com', 'right')).rejects.toMatchObject({
+      users.findByEmailWithCredentials.mockResolvedValue({
+        ...user,
+        status: UserStatus.SUSPENDED,
+        passwordHash: 'h',
+      });
+      await expect(
+        service.validateCredentials('user@example.com', 'right'),
+      ).rejects.toMatchObject({
         code: 'AUTH_ACCOUNT_NOT_ACTIVE',
         details: { status: 'SUSPENDED' },
       });
@@ -122,7 +148,10 @@ describe('AuthService', () => {
   describe('login (FR-LOGIN-06..08)', () => {
     it('creates a session storing only the refresh-token hash and returns the token pair', async () => {
       const { service, sessions, users, tokens } = setup();
-      const result = await service.login({ email: 'user@example.com', password: 'right' }, ctx);
+      const result = await service.login(
+        { email: 'user@example.com', password: 'right' },
+        ctx,
+      );
 
       const [sessionInput] = sessions.create.mock.calls[0];
       expect(sessionInput).toMatchObject({
@@ -134,9 +163,18 @@ describe('AuthService', () => {
       });
       expect(JSON.stringify(sessionInput)).not.toContain('"refresh.jwt"');
       // Both tokens are bound to the same new session id.
-      expect(tokens.signAccessToken).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1' }), sessionInput.id);
-      expect(tokens.signRefreshToken).toHaveBeenCalledWith('u1', sessionInput.id);
-      expect(users.updateLastLoginAt).toHaveBeenCalledWith('u1', expect.any(Date));
+      expect(tokens.signAccessToken).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'u1' }),
+        sessionInput.id,
+      );
+      expect(tokens.signRefreshToken).toHaveBeenCalledWith(
+        'u1',
+        sessionInput.id,
+      );
+      expect(users.updateLastLoginAt).toHaveBeenCalledWith(
+        'u1',
+        expect.any(Date),
+      );
       expect(result).toMatchObject({
         accessToken: 'access.jwt',
         refreshToken: 'refresh.jwt',
@@ -151,67 +189,118 @@ describe('AuthService', () => {
     it('FR-S-05: re-hashes when parameters are outdated', async () => {
       const { service, passwords, users } = setup();
       passwords.needsRehash.mockReturnValue(true);
-      await service.login({ email: 'user@example.com', password: 'right' }, ctx);
+      await service.login(
+        { email: 'user@example.com', password: 'right' },
+        ctx,
+      );
       expect(passwords.hash).toHaveBeenCalledWith('right');
       expect(users.updatePasswordHash).toHaveBeenCalledWith('u1', 'hashed');
     });
 
     it('gives every login its own session id', async () => {
       const { service, sessions } = setup();
-      await service.login({ email: 'user@example.com', password: 'right' }, ctx);
-      await service.login({ email: 'user@example.com', password: 'right' }, ctx);
-      expect(sessions.create.mock.calls[0][0].id).not.toBe(sessions.create.mock.calls[1][0].id);
+      await service.login(
+        { email: 'user@example.com', password: 'right' },
+        ctx,
+      );
+      await service.login(
+        { email: 'user@example.com', password: 'right' },
+        ctx,
+      );
+      expect(sessions.create.mock.calls[0][0].id).not.toBe(
+        sessions.create.mock.calls[1][0].id,
+      );
     });
   });
 
   it('SessionRevokedReason covers every documented reason', () => {
     expect(Object.values(SessionRevokedReason)).toEqual([
-      'LOGOUT', 'LOGOUT_ALL', 'LOGOUT_OTHERS', 'REUSE_DETECTED', 'USER_NOT_ACTIVE', 'ADMIN_REVOKED',
+      'LOGOUT',
+      'LOGOUT_ALL',
+      'LOGOUT_OTHERS',
+      'REUSE_DETECTED',
+      'USER_NOT_ACTIVE',
+      'ADMIN_REVOKED',
     ]);
   });
 });
 
 describe('AuthService.refreshTokens (JWT_SPEC §6)', () => {
-  const refresh = { userId: 'u1', sessionId: 's1', refreshToken: 'old.refresh' };
+  const refresh = {
+    userId: 'u1',
+    sessionId: 's1',
+    refreshToken: 'old.refresh',
+  };
 
   it('rotates with a compare-and-swap on the old hash and returns the new pair', async () => {
     const { service, sessions, tokens } = setup();
     const result = await service.refreshTokens(refresh);
-    expect(tokens.signAccessToken).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1' }), 's1');
+    expect(tokens.signAccessToken).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'u1' }),
+      's1',
+    );
     expect(tokens.signRefreshToken).toHaveBeenCalledWith('u1', 's1');
     expect(sessions.rotate).toHaveBeenCalledWith(
-      's1', 'sha256(old.refresh)', 'sha256(refresh.jwt)', new Date('2026-02-01T00:00:00Z'),
+      's1',
+      'sha256(old.refresh)',
+      'sha256(refresh.jwt)',
+      new Date('2026-02-01T00:00:00Z'),
     );
-    expect(result).toEqual({ accessToken: 'access.jwt', refreshToken: 'refresh.jwt', tokenType: 'Bearer', expiresIn: 900 });
+    expect(result).toEqual({
+      accessToken: 'access.jwt',
+      refreshToken: 'refresh.jwt',
+      tokenType: 'Bearer',
+      expiresIn: 900,
+    });
   });
 
   it('treats a lost swap as reuse: revokes the session and returns 401', async () => {
     const { service, sessions } = setup();
     sessions.rotate.mockResolvedValue(false);
-    await expect(service.refreshTokens(refresh)).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    await expect(service.refreshTokens(refresh)).rejects.toMatchObject({
+      code: 'AUTH_REFRESH_TOKEN_INVALID',
+    });
     expect(sessions.revokeForReuse).toHaveBeenCalledWith('s1', 'u1');
   });
 
   it('rejects when the user no longer exists', async () => {
     const { service, users, sessions } = setup();
     users.findById.mockResolvedValue(null);
-    await expect(service.refreshTokens(refresh)).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    await expect(service.refreshTokens(refresh)).rejects.toMatchObject({
+      code: 'AUTH_REFRESH_TOKEN_INVALID',
+    });
     expect(sessions.rotate).not.toHaveBeenCalled();
   });
 });
 
 describe('AuthService logout (FR-LOGOUT)', () => {
-  const current = { id: 'u1', email: 'user@example.com', roles: [Role.USER], status: UserStatus.ACTIVE, sessionId: 's1' };
+  const current = {
+    id: 'u1',
+    email: 'user@example.com',
+    roles: [Role.USER],
+    status: UserStatus.ACTIVE,
+    sessionId: 's1',
+  };
 
   it('logout revokes only the current session with LOGOUT', async () => {
     const { service, sessions } = setup();
-    await expect(service.logout(current)).resolves.toEqual({ revokedSessions: 1 });
-    expect(sessions.revoke).toHaveBeenCalledWith('s1', SessionRevokedReason.LOGOUT);
+    await expect(service.logout(current)).resolves.toEqual({
+      revokedSessions: 1,
+    });
+    expect(sessions.revoke).toHaveBeenCalledWith(
+      's1',
+      SessionRevokedReason.LOGOUT,
+    );
   });
 
   it('logout-all revokes every session of the user with LOGOUT_ALL', async () => {
     const { service, sessions } = setup();
-    await expect(service.logoutAll(current)).resolves.toEqual({ revokedSessions: 3 });
-    expect(sessions.revokeAllForUser).toHaveBeenCalledWith('u1', SessionRevokedReason.LOGOUT_ALL);
+    await expect(service.logoutAll(current)).resolves.toEqual({
+      revokedSessions: 3,
+    });
+    expect(sessions.revokeAllForUser).toHaveBeenCalledWith(
+      'u1',
+      SessionRevokedReason.LOGOUT_ALL,
+    );
   });
 });

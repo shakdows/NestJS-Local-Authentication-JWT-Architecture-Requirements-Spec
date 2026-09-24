@@ -13,30 +13,70 @@ const config = {
 describe('TokenService (JWT_SPEC)', () => {
   const jwt = new JwtService({});
   const service = new TokenService(jwt, config);
-  const user = { id: '8f1c2e5a-0b7d-4c1e-9a55-2d3f1b6c7e90', email: 'user@example.com', roles: [Role.USER] };
+  const user = {
+    id: '8f1c2e5a-0b7d-4c1e-9a55-2d3f1b6c7e90',
+    email: 'user@example.com',
+    roles: [Role.USER],
+  };
   const sid = '3b0e7a52-6f2d-4a8c-b1e4-9c7d5f0a1e23';
 
   it('access token carries exactly the JWT_SPEC §3.1 claims, HS256, TTL from config', async () => {
     const token = await service.signAccessToken(user, sid);
     const [header] = token.split('.');
-    expect(JSON.parse(Buffer.from(header, 'base64url').toString())).toEqual({ alg: 'HS256', typ: 'JWT' });
-    const payload = await jwt.verifyAsync(token, { secret: config.access.secret, algorithms: ['HS256'] });
-    expect(Object.keys(payload).sort()).toEqual(['aud', 'email', 'exp', 'iat', 'iss', 'roles', 'sid', 'sub', 'type']);
+    expect(JSON.parse(Buffer.from(header, 'base64url').toString())).toEqual({
+      alg: 'HS256',
+      typ: 'JWT',
+    });
+    const payload = await jwt.verifyAsync(token, {
+      secret: config.access.secret,
+      algorithms: ['HS256'],
+    });
+    expect(Object.keys(payload).sort()).toEqual([
+      'aud',
+      'email',
+      'exp',
+      'iat',
+      'iss',
+      'roles',
+      'sid',
+      'sub',
+      'type',
+    ]);
     expect(payload).toMatchObject({
-      sub: user.id, email: user.email, roles: ['USER'], sid, type: 'access', iss: 'iss-test', aud: 'aud-test',
+      sub: user.id,
+      email: user.email,
+      roles: ['USER'],
+      sid,
+      type: 'access',
+      iss: 'iss-test',
+      aud: 'aud-test',
     });
     expect(payload.exp - payload.iat).toBe(900);
   });
 
   it('access token is not verifiable with the refresh secret (SEC-JWT-01)', async () => {
     const token = await service.signAccessToken(user, sid);
-    await expect(jwt.verifyAsync(token, { secret: config.refresh.secret })).rejects.toThrow();
+    await expect(
+      jwt.verifyAsync(token, { secret: config.refresh.secret }),
+    ).rejects.toThrow();
   });
 
   it('refresh token carries only sub/sid/jti/type (+ standard claims) and matches expiresAt', async () => {
     const { token, expiresAt } = await service.signRefreshToken(user.id, sid);
-    const payload = await jwt.verifyAsync(token, { secret: config.refresh.secret, algorithms: ['HS256'] });
-    expect(Object.keys(payload).sort()).toEqual(['aud', 'exp', 'iat', 'iss', 'jti', 'sid', 'sub', 'type']);
+    const payload = await jwt.verifyAsync(token, {
+      secret: config.refresh.secret,
+      algorithms: ['HS256'],
+    });
+    expect(Object.keys(payload).sort()).toEqual([
+      'aud',
+      'exp',
+      'iat',
+      'iss',
+      'jti',
+      'sid',
+      'sub',
+      'type',
+    ]);
     expect(payload.type).toBe('refresh');
     expect(payload.exp - payload.iat).toBe(604800);
     expect(expiresAt.getTime()).toBe(payload.exp * 1000);
@@ -51,7 +91,9 @@ describe('TokenService (JWT_SPEC)', () => {
   it('hashes refresh tokens with SHA-256 hex (SEC-TOKEN-02/04)', () => {
     const hash = service.hashRefreshToken('some.jwt.token');
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
-    expect(hash).toBe(createHash('sha256').update('some.jwt.token').digest('hex'));
+    expect(hash).toBe(
+      createHash('sha256').update('some.jwt.token').digest('hex'),
+    );
     expect(service.hashRefreshToken('some.jwt.token')).toBe(hash);
   });
 
