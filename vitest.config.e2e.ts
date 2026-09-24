@@ -5,6 +5,7 @@ import { TEST_ENV } from './test/setup/test-env.js';
 export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
+    name: 'e2e',
     globals: true,
     root: './',
     include: ['test/**/*.e2e-spec.ts'],

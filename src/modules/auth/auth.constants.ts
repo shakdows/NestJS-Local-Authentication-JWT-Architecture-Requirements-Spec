@@ -18,6 +18,3 @@ export const AUTH_THROTTLE = {
   login: { limit: 5, ttl: 60_000 },
   refresh: { limit: 30, ttl: 60_000 },
 } as const;
-
-/** SHOULD (SEC-RATE-03): additional login limit per IP + normalized email. */
-export const LOGIN_ACCOUNT_THROTTLE = { limit: 10, ttl: 15 * 60_000 } as const;

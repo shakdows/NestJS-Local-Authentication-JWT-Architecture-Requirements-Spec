@@ -23,15 +23,16 @@
 
 | Item | Spec default | Detected | Decision |
 |---|---|---|---|
-| Node.js | ≥ 22 LTS (`.nvmrc` = 24) | *(fill)* | |
-| Package manager | npm | *(fill)* | |
-| NestJS | 12.x, Express | *(fill)* | |
-| ORM / DB | TypeORM 1.x / PostgreSQL ≥ 15 | *(fill)* | |
-| Validation | class-validator + class-transformer | *(fill)* | |
-| Config | @nestjs/config + Joi | *(fill)* | |
-| Tests | Jest + Supertest | *(fill)* | |
-| Folder layout | `src/modules/*` (AUTH_ARCHITECTURE §5) | *(fill)* | |
-| Existing auth code | none at spec time | *(fill)* | reuse / adapt / replace + why |
+| Node.js | ≥ 22 LTS (`.nvmrc` = 24) | 22.22 in the build container | `engines.node >= 22`, `.nvmrc` 24 |
+| Package manager | npm | npm 10.9 crashes on the Nest 12 tree (`edgesOut` bug) | npm, with `engines.npm >= 11` |
+| NestJS | 12.x, Express | `@nestjs/cli` 12.0.5 scaffold → `@nestjs/core` 12.1.0 | kept as scaffolded: **ESM** (`"type": "module"`, `.js` import suffixes), TypeScript 6 |
+| ORM / DB | TypeORM 1.x / PostgreSQL ≥ 15 | typeorm 1.1.1, PostgreSQL 16 | as spec |
+| Validation | class-validator + class-transformer | 0.15.1 / 0.5.1 | as spec |
+| Config | @nestjs/config + Joi | 12.0.1 / 18.2.9 | as spec |
+| Tests | Jest + Supertest | the Nest 12 scaffold ships **Vitest** + Supertest | kept the scaffold (plan rule: keep generated test config) |
+| Lint | ESLint + Prettier | the Nest 12 scaffold ships **oxlint** + Prettier | kept the scaffold |
+| Folder layout | `src/modules/*` (AUTH_ARCHITECTURE §5) | none | as spec |
+| Existing auth code | none at spec time | none | built from scratch |
 
 At spec time (2026-09-24) the repository was empty, so every row defaulted to the spec value.
 
@@ -39,7 +40,20 @@ At spec time (2026-09-24) the repository was empty, so every row defaulted to th
 
 | Phase | Spec says | Implemented | Reason | Approved by |
 |---|---|---|---|---|
-| | | | | |
+| — | Roles `USER`, `ADMIN`, `SUPER_ADMIN`; admin endpoints SHOULD | Roles `USER`, `ADMIN`; admin user management MUST (FR-ADMIN) | Product decision during implementation; specs updated | Product owner |
+| 1 | Jest, ESLint | Vitest, oxlint | Nest 12 CLI defaults; plan rule 1.3 says keep them | Agent (rule) |
+| 1 | `.env.test` file (git-ignored) | Test env in `test/setup/test-env.ts`, injected via Vitest `env` | A git-ignored file would make tests fail on fresh clones. The values are clearly fake. | Agent |
+| 1, 4 | Route throttles always on | `THROTTLE_ENABLED` switch (default `true`, rejected in production) | Functional e2e suites make many requests from one IP; throttling has its own suite | Agent |
+| 1 | Body limit via `useBodyParser` in addition to defaults | Same, plus `Cache-Control: no-store` on **all** responses | Safe superset of SEC-HTTP-06 for a JSON API | Agent |
+| 2 | Entities via glob | Explicit `ENTITIES` / `MIGRATIONS` arrays | Identical behaviour under Nest, the TypeORM CLI (tsx, ESM) and tests | Agent |
+| 5–8 | Four phases with interim code (temporary `sid`, user-by-`sub` lookup) | Implemented directly in final form, in one commit | Interim code would have been written only to be deleted; every test those phases require exists | Agent |
+| 8 | `findActiveSessionForAccess` returns `{ session, user }` | Returns a `SessionIdentity` (ids, email, status, DB roles) from one raw join | Avoids coupling SessionsRepository to UsersRepository's mapper; still one query | Agent |
+| 10 | Session endpoints in `SessionsController` calling `SessionsService` | Added `UserSessionsService` between them | Keeps ownership checks and response mapping out of both controllers and the core service | Agent |
+| 11 | `UsersController` calls `UsersService` | Added `UsersAdminService` for response mapping and pagination | Keeps the controller thin and `UsersService` free of DTOs | Agent |
+| 11 | `seed-super-admin.ts` via tsx | `seed-admin.ts`, run from the compiled build (`npm run seed`) | tsx does not emit decorator metadata, which Nest DI needs | Agent |
+| 12 | Coverage with Jest | `vitest.config.coverage.ts` (unit + e2e projects); DTOs, entities, enums and types excluded | v8 counts decorator metadata as branches in declarative files | Agent |
+| 12 | FR-S-06 login throttle per IP + email (SHOULD) | **Deferred**; per-IP limits are enforced | Needs a custom throttler tracker; not required for MUST scope | Agent (deferral) |
+| 12 | FR-S-10 Swagger/OpenAPI (SHOULD) | **Deferred** | Adds a dependency and DTO annotations; AUTH_API.md is the contract for now | Agent (deferral) |
 
 ## 4. Pending decisions (confirm before or during Phase 1)
 
