@@ -21,7 +21,13 @@
 | GET | `/auth/sessions` | access token | SHOULD | `200` |
 | DELETE | `/auth/sessions/:id` | access token | SHOULD | `200` |
 | POST | `/auth/sessions/revoke-others` | access token | SHOULD | `200` |
-| GET | `/users` | access token + `ADMIN` | SHOULD | `200` |
+| GET | `/users` | access token + `ADMIN` | MUST | `200` |
+| GET | `/users/stats` | access token + `ADMIN` | MUST | `200` |
+| GET | `/users/:id` | access token + `ADMIN` | MUST | `200` |
+| PATCH | `/users/:id/status` | access token + `ADMIN` | MUST | `200` |
+| PATCH | `/users/:id/roles` | access token + `ADMIN` | MUST | `200` |
+| GET | `/users/:id/sessions` | access token + `ADMIN` | MUST | `200` |
+| DELETE | `/users/:id/sessions` | access token + `ADMIN` | MUST | `200` |
 
 ## 2. Conventions
 
@@ -94,6 +100,7 @@ Nested fields use dot paths (`address.city`). Submitted values are never echoed.
 | 403 | `AUTH_ACCOUNT_NOT_ACTIVE` | `Account is not active` | Status ≠ `ACTIVE` (after password check on login) |
 | 403 | `AUTH_FORBIDDEN` | `Insufficient permissions` | Authenticated but lacks the required role |
 | 404 | `RESOURCE_NOT_FOUND` | `Resource not found` | Unknown route, or session not owned by the caller |
+| 403 | `USER_SELF_MODIFICATION_FORBIDDEN` | `You cannot change your own status or remove your own admin role` | Admin targets themself (FR-ADMIN-06) |
 | 409 | `AUTH_EMAIL_ALREADY_EXISTS` | `Email is already registered` | Duplicate normalized email |
 | 413 | `PAYLOAD_TOO_LARGE` | `Payload too large` | Body > 100 kb |
 | 429 | `RATE_LIMITED` | `Too many requests, please try again later` | Throttler limit hit |
@@ -336,16 +343,51 @@ Revoking the current session this way behaves like `/auth/logout`.
 **Purpose:** revoke all of the caller's sessions **except** the current one.
 Success: `200 { "success": true, "data": { "revokedSessions": 2 } }` · Errors: as `/auth/me`.
 
-### 3.10 `GET /users` (SHOULD, RBAC reference endpoint)
+### 3.10 `GET /users` (ADMIN)
 
 **Purpose:** paginated user list for administrators.
-**Authentication:** access token + role `ADMIN` (`SUPER_ADMIN` passes via hierarchy).
+**Authentication:** access token + role `ADMIN`.
 
-**Query (`ListUsersQueryDto`):** `page` int ≥ 1 (default 1) · `limit` int 1–100 (default 20). Transformed with `@Type(() => Number)`.
+**Query (`ListUsersQueryDto`):** `page` int ≥ 1 (default 1) · `limit` int 1–100 (default 20) · `status` optional `UserStatus` · `role` optional `Role` · `search` optional string ≤ 254 (case-insensitive email substring; `%`/`_` are escaped). Numbers transformed with `@Type(() => Number)`.
 
 **Success, `200 OK`:** `data = { items: UserResponse[], meta: { page, limit, total, totalPages } }`, ordered by `createdAt DESC`.
 
 **Errors:** `400 VALIDATION_FAILED` · `401 …` · `403 AUTH_FORBIDDEN` · `403 AUTH_ACCOUNT_NOT_ACTIVE`
+
+All `/users/**` endpoints below share the same auth (access token + `ADMIN`) and the same `401`/`403` errors. `:id` uses `ParseUUIDPipe` (bad format → `400`).
+
+### 3.11 `GET /users/stats` (ADMIN)
+
+```json
+{ "success": true, "data": {
+  "total": 42,
+  "byStatus": { "ACTIVE": 38, "INACTIVE": 2, "SUSPENDED": 1, "PENDING_VERIFICATION": 1 },
+  "byRole": { "USER": 42, "ADMIN": 3 } } }
+```
+
+### 3.12 `GET /users/:id` (ADMIN)
+
+`200 { success, data: { user: UserResponse } }` · `404 RESOURCE_NOT_FOUND`.
+
+### 3.13 `PATCH /users/:id/status` (ADMIN)
+
+Body (`UpdateUserStatusDto`): `{ "status": "SUSPENDED" }`. `status` is required and must be a `UserStatus` value.
+`200 { success, data: { user } }` · `400 VALIDATION_FAILED` · `403 USER_SELF_MODIFICATION_FORBIDDEN` (own id) · `404 RESOURCE_NOT_FOUND`.
+The user's existing access and refresh tokens stop working on their next use if the new status is not `ACTIVE`.
+
+### 3.14 `PATCH /users/:id/roles` (ADMIN)
+
+Body (`UpdateUserRolesDto`): `{ "roles": ["ADMIN"] }`. `roles` is a required array of 1–10 unique `Role` values. The stored set always includes `USER`, so `["ADMIN"]` is stored as `[USER, ADMIN]` and `["USER"]` demotes to a plain user.
+`200 { success, data: { user } }` · `400 VALIDATION_FAILED` · `403 USER_SELF_MODIFICATION_FORBIDDEN` (removing own `ADMIN`) · `404 RESOURCE_NOT_FOUND`.
+The new roles apply on the target's next request (DB roles, FR-ROLE-05).
+
+### 3.15 `GET /users/:id/sessions` (ADMIN)
+
+`200 { success, data: { items: AdminSessionResponse[] } }`, with the same fields as §3.7 minus `current` · `404 RESOURCE_NOT_FOUND` for an unknown user.
+
+### 3.16 `DELETE /users/:id/sessions` (ADMIN)
+
+Revokes every active session of the user (`ADMIN_REVOKED`). `200 { success, data: { revokedSessions: n } }` · `404 RESOURCE_NOT_FOUND`.
 
 ---
 
@@ -362,7 +404,9 @@ Success: `200 { "success": true, "data": { "revokedSessions": 2 } }` · Errors: 
 | GET /auth/sessions | ✓ | | | ✓ | ✓ | | | ✓ |
 | DELETE /auth/sessions/:id | ✓ | | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | POST /auth/sessions/revoke-others | ✓ | | | ✓ | ✓ | | | ✓ |
-| GET /users | ✓ | | ✓ | ✓ | ✓ | | | ✓ |
+| GET /users, /users/stats | ✓ | | ✓ | ✓ | ✓ | | | ✓ |
+| GET /users/:id, GET/DELETE /users/:id/sessions | ✓ | | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| PATCH /users/:id/status, /users/:id/roles | ✓ | | ✓ | ✓ | ✓ | ✓ | | ✓ |
 
 Any endpoint may also return `500 INTERNAL_ERROR`.
 

@@ -184,7 +184,7 @@ The reviewer MUST confirm each item, citing a file/line or test name:
 4. Refresh flow: hash stored, compare-and-swap rotation, reuse revokes, generic 401. Tests exist for each.
 5. Logout / logout-all revoke sessions and the access token stops working immediately (e2e test).
 6. Unknown-email vs wrong-password responses are byte-identical (e2e test compares bodies without `timestamp`).
-7. `RolesGuard` fails closed. The SUPER_ADMIN ⊇ ADMIN hierarchy is tested.
+7. `RolesGuard` fails closed. The ADMIN ⊇ USER hierarchy is tested. Admin self-modification is forbidden.
 8. Throttling on register/login/refresh returns 429 (e2e test with a lowered limit).
 9. `helmet`, CORS allowlist, body limit and `Cache-Control: no-store` present.
 10. `.env.example` has placeholders only. No secrets in git history.

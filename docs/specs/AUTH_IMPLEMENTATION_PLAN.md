@@ -56,7 +56,7 @@ Each decision has a **default**. If nobody answers, the agent implements the def
 | D-07 | Reuse detection scope | Revoke the **affected session** only | Revoke **all** sessions of the user |
 | D-08 | Concurrent refresh | Strict: a lost race = reuse → session revoked | Grace window (e.g. 10 s) returning the already-rotated pair |
 | D-09 | Default status on register | `ACTIVE` | `PENDING_VERIFICATION` once email verification exists |
-| D-10 | Role hierarchy | `SUPER_ADMIN ⊇ ADMIN ⊇ USER` | Flat roles (exact match only) |
+| D-10 | Role hierarchy | `ADMIN ⊇ USER` (confirmed: roles are USER and ADMIN only) | Flat roles (exact match only) |
 | D-11 | Roles storage | `user_roles` join table with a Postgres enum | Enum array column on `users`; full `roles` table |
 | D-12 | Password policy | 8–128 chars, ≥ 1 letter + ≥ 1 digit, ≠ email | NIST-style 12+ chars without composition rules; breached-password check |
 | D-13 | Refresh lifetime | `7d` sliding | `30d`; add an absolute cap (OPT-13) |
@@ -145,7 +145,7 @@ Legend: **C** = create, **M** = modify. Paths are relative to the repo root.
 - Inserting `User@Example.com` stores `user@example.com`. A direct SQL insert of an uppercase email fails the check constraint.
 
 **Tests required**
-- Unit: `normalizeEmail`. `toUserResponse` (output keys are exactly the UserResponse keys: snapshot test asserting no `passwordHash`). `RolesService` (SUPER_ADMIN passes ADMIN and USER. ADMIN fails SUPER_ADMIN. Empty required list → true). `UsersService` with a mocked repository (normalizes before lookup, maps the unique violation).
+- Unit: `normalizeEmail`. `toUserResponse` (output keys are exactly the UserResponse keys: snapshot test asserting no `passwordHash`). `RolesService` (ADMIN passes USER. USER fails ADMIN. Empty required list → true). `UsersService` with a mocked repository (normalizes before lookup, maps the unique violation).
 - Integration (e2e DB): repository create/find round trip. Duplicate email → `AUTH_EMAIL_ALREADY_EXISTS`. Cascade delete of roles.
 
 **Security considerations:** `password_hash` `select: false`. `synchronize: false`. Parameterized queries only.
@@ -377,11 +377,11 @@ Legend: **C** = create, **M** = modify. Paths are relative to the repo root.
 | C (SHOULD) | `src/database/seeds/seed-super-admin.ts`, npm script `seed` |
 | C (SHOULD) | `test/users.e2e-spec.ts` |
 
-**Acceptance criteria:** `@Roles(Role.ADMIN)` on `GET /users` allows ADMIN and SUPER_ADMIN, denies USER with 403, denies anonymous with 401. A role granted in the DB takes effect on the next request without a new login.
+**Acceptance criteria:** `@Roles(Role.ADMIN)` on `GET /users` allows ADMIN, denies USER with 403, denies anonymous with 401. A role granted in the DB takes effect on the next request without a new login.
 
 **Tests required**
 - Unit `RolesGuard`: no metadata → allow · no user → 401 · matching role → allow · hierarchy → allow · non-matching → 403 `AUTH_FORBIDDEN`.
-- E2E **authenticated user** (USER on a USER route → 200) · **unauthenticated user** → 401 · **valid role** (ADMIN, SUPER_ADMIN on `GET /users`) → 200 · **invalid role** (USER on `GET /users`) → 403 · role removed in the DB → next request 403 even though the JWT `roles` claim still says ADMIN.
+- E2E **authenticated user** (USER on a USER route → 200) · **unauthenticated user** → 401 · **valid role** (ADMIN on `GET /users`; ADMIN on a `@Roles(USER)` route) → 200 · **invalid role** (USER on `GET /users`) → 403 · role removed in the DB → next request 403 even though the JWT `roles` claim still says ADMIN.
 - Seed: running twice creates one user.
 
 **Security considerations:** FR-ROLE-05/06 (DB roles, fail closed). No endpoint lets a user change their own roles.

@@ -14,7 +14,7 @@ The boilerplate MUST provide a complete, self-contained authentication system th
 - Identity is proven with **email + password**. Passwords are hashed with **Argon2id**.
 - API requests are authenticated with short-lived **JWT access tokens** (`Authorization: Bearer <token>`).
 - Sessions are kept alive with long-lived, **rotating JWT refresh tokens**. Each one is bound to a server-side **authentication session** row (`auth_sessions`).
-- Authorization is **role-based** (`USER`, `ADMIN`, `SUPER_ADMIN`).
+- Authorization is **role-based** (`USER`, `ADMIN`), enforced server-side only.
 
 ### 1.1 Out of scope (explicitly)
 
@@ -135,13 +135,31 @@ The boilerplate MUST provide a complete, self-contained authentication system th
 
 | ID | Requirement |
 |---|---|
-| FR-ROLE-01 | Roles MUST be defined by the `Role` enum: `USER`, `ADMIN`, `SUPER_ADMIN`. It lives in `modules/roles/role.enum.ts`. |
+| FR-ROLE-01 | Roles MUST be defined by the `Role` enum: `USER`, `ADMIN`. It lives in `modules/roles/role.enum.ts`. Adding a role later is an enum value + migration + hierarchy entry, with no redesign. |
 | FR-ROLE-02 | A user MAY hold several roles. They are stored in `user_roles` (AUTH_DATABASE). |
 | FR-ROLE-03 | `@Roles(...roles)` MUST attach required roles as metadata. `RolesGuard` MUST allow the request if the user holds **any** of the listed roles, after applying the hierarchy (FR-ROLE-04). |
-| FR-ROLE-04 | The hierarchy MUST be `SUPER_ADMIN ⊇ ADMIN ⊇ USER`: a `SUPER_ADMIN` passes `@Roles(Role.ADMIN)`. It lives in `RolesService`, not in the guard. |
+| FR-ROLE-04 | The hierarchy MUST be `ADMIN ⊇ USER`: an `ADMIN` passes `@Roles(Role.USER)`. It lives in `RolesService` (a constant map), not in the guard. |
 | FR-ROLE-05 | `RolesGuard` MUST use the roles loaded **from the database** by the `jwt` strategy, never the `roles` claim alone. |
 | FR-ROLE-06 | `RolesGuard` MUST fail closed: if `@Roles` is present and there is no authenticated user, deny with `401`. If roles do not match, deny with `403 AUTH_FORBIDDEN`. |
 | FR-ROLE-07 | Routes without `@Roles` MUST NOT be restricted by `RolesGuard`. |
+| FR-ROLE-08 | New registered accounts MUST receive exactly `[USER]`. `ADMIN` MUST never be assignable through public registration. |
+| FR-ROLE-09 | Only authorized administrative operations (FR-ADMIN, role `ADMIN`) can promote a `USER` to `ADMIN` or demote an `ADMIN`. |
+| FR-ROLE-10 | Access tokens MAY carry `roles`, but authorization MUST always be enforced server-side from DB state. The frontend is never the source of truth for permissions. |
+| FR-ROLE-11 | Every user always holds `USER`. Role updates are normalized to include it. |
+
+### 3.9.1 Administration (`FR-ADMIN`)
+
+All endpoints below require `JwtAuthGuard` + `RolesGuard` with `@Roles(Role.ADMIN)`.
+
+| ID | Requirement |
+|---|---|
+| FR-ADMIN-01 | `GET /users` MUST return a paginated user list with optional filters `status`, `role`, `search` (email substring, case-insensitive). |
+| FR-ADMIN-02 | `GET /users/stats` MUST return counts: `total`, `byStatus` (every `UserStatus`), `byRole` (every `Role`). |
+| FR-ADMIN-03 | `GET /users/:id` MUST return one user (`404 RESOURCE_NOT_FOUND` if unknown). |
+| FR-ADMIN-04 | `PATCH /users/:id/status` MUST change the account status. The change takes effect immediately (FR-STATUS-03). |
+| FR-ADMIN-05 | `PATCH /users/:id/roles` MUST replace the user's roles (normalized per FR-ROLE-11). |
+| FR-ADMIN-06 | An admin MUST NOT change their own status or remove their own `ADMIN` role (`403 USER_SELF_MODIFICATION_FORBIDDEN`). Because only admins can demote admins, this also guarantees that at least one admin always remains. |
+| FR-ADMIN-07 | `GET /users/:id/sessions` MUST list a user's active sessions. `DELETE /users/:id/sessions` MUST revoke all of them (`revoked_reason = ADMIN_REVOKED`). These live in AuthModule (sessions are an auth concern) so that UsersModule never depends on AuthModule. |
 
 ### 3.10 Account status (`FR-STATUS`)
 
@@ -195,8 +213,8 @@ The boilerplate MUST provide a complete, self-contained authentication system th
 | `AUTH_ARGON2_PARALLELISM` | no | `1` | int ≥ 1 |
 | `THROTTLE_TTL` | no | `60` (seconds) | int > 0 |
 | `THROTTLE_LIMIT` | no | `100` | int > 0 |
-| `SEED_SUPER_ADMIN_EMAIL` | no | — | email; used only by the seed script |
-| `SEED_SUPER_ADMIN_PASSWORD` | no | — | satisfies FR-PWD; used only by the seed script |
+| `SEED_ADMIN_EMAIL` | no | — | email; used only by the seed script |
+| `SEED_ADMIN_PASSWORD` | no | — | satisfies FR-PWD; used only by the seed script |
 
 ## 4. Functional requirements: SHOULD
 
@@ -205,11 +223,11 @@ The boilerplate MUST provide a complete, self-contained authentication system th
 | FR-S-01 | `GET /auth/sessions` SHOULD list the current user's active sessions (id, user agent, IP, created/last-used, `current` flag). |
 | FR-S-02 | `DELETE /auth/sessions/:id` SHOULD revoke one of the current user's own sessions (reason `LOGOUT`). Another user's session id MUST return `404`. |
 | FR-S-03 | `POST /auth/sessions/revoke-others` SHOULD revoke all sessions except the current one (reason `LOGOUT_OTHERS`). |
-| FR-S-04 | `GET /users` (roles: `ADMIN`) SHOULD return a paginated user list. This is the reference example of role-protected endpoints. |
+| FR-S-04 | *(promoted to MUST, see FR-ADMIN)* |
 | FR-S-05 | On successful login, if `argon2.needsRehash()` reports outdated parameters, the password SHOULD be re-hashed and saved. |
 | FR-S-06 | Login throttling SHOULD key on `IP + normalized email` in addition to IP alone (SEC-RATE-03). |
 | FR-S-07 | Expired and revoked sessions SHOULD be purged after a retention period (30 days) by a documented script or scheduled job. |
-| FR-S-08 | A seed script SHOULD create an initial `SUPER_ADMIN` from `SEED_SUPER_ADMIN_*`. It is idempotent and refuses to run in production unless `--force` is given. |
+| FR-S-08 | A seed script SHOULD create an initial `ADMIN` from `SEED_ADMIN_*`. It is idempotent and refuses to run in production unless `--force` is given. |
 | FR-S-09 | An `@Auth(...roles)` composite decorator SHOULD combine `UseGuards(JwtAuthGuard, RolesGuard)` and `Roles(...)`. |
 | FR-S-10 | Swagger/OpenAPI docs (`@nestjs/swagger`) SHOULD describe the auth endpoints, with the bearer scheme declared. They are served only outside production unless enabled. |
 | FR-S-11 | Security-relevant events (login success/failure, refresh reuse, logout-all) SHOULD be logged as structured entries holding only `userId`, `sessionId`, `ip`, `event`, never tokens or passwords. |

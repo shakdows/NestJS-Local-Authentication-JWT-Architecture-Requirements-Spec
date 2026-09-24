@@ -107,7 +107,7 @@ Owns the **user record**: persistence, retrieval, updates, status and role assig
 | TypeORM access to `users` and `user_roles` | `UsersRepository` |
 | Persistence models | `UserEntity`, `UserRoleEntity` |
 | Public representation | `UserResponseDto` + `toUserResponse()` mapper |
-| Admin HTTP endpoints | `UsersController` (SHOULD: `GET /users`) |
+| Admin HTTP endpoints | `UsersController`: `GET /users`, `GET /users/stats`, `GET /users/:id`, `PATCH /users/:id/status`, `PATCH /users/:id/roles` |
 
 UsersModule MUST NOT import AuthModule. It MUST NOT hash passwords (AuthModule passes it a finished hash).
 
@@ -117,7 +117,7 @@ Answers **"what may this caller do?"** at the role level.
 
 | Component | Responsibility |
 |---|---|
-| `role.enum.ts` | `Role` enum (`USER`, `ADMIN`, `SUPER_ADMIN`) — imported as a plain TS type by any module |
+| `role.enum.ts` | `Role` enum (`USER`, `ADMIN`) — imported as a plain TS type by any module |
 | `RolesService` | Role hierarchy, `expand(roles)`, `hasAnyRole(userRoles, required)` |
 | `RolesModule` | Provides and exports `RolesService`. Has no dependencies. |
 
@@ -230,7 +230,8 @@ Paths in bold are SHOULD-level. Everything else is MUST.
         │   ├── sessions/
         │   │   ├── sessions.service.ts
         │   │   ├── sessions.repository.ts
-        │   │   ├── sessions.controller.ts     (SHOULD)
+        │   │   ├── sessions.controller.ts     (/auth/sessions — own sessions)
+        │   │   ├── admin-sessions.controller.ts (/users/:id/sessions — ADMIN)
         │   │   ├── entities/
         │   │   │   └── auth-session.entity.ts
         │   │   ├── enums/
@@ -262,7 +263,7 @@ Paths in bold are SHOULD-level. Everything else is MUST.
         │
         ├── users/
         │   ├── users.module.ts
-        │   ├── users.controller.ts            (SHOULD: GET /users for ADMIN)
+        │   ├── users.controller.ts            (ADMIN user management)
         │   ├── users.service.ts
         │   ├── users.repository.ts
         │   ├── entities/
@@ -272,7 +273,9 @@ Paths in bold are SHOULD-level. Everything else is MUST.
         │   │   └── user-status.enum.ts
         │   ├── dto/
         │   │   ├── user-response.dto.ts
-        │   │   └── list-users-query.dto.ts    (SHOULD)
+        │   │   ├── list-users-query.dto.ts
+        │   │   ├── update-user-status.dto.ts
+        │   │   └── update-user-roles.dto.ts
         │   ├── mappers/
         │   │   └── user.mapper.ts             (toUserResponse(user))
         │   ├── types/
@@ -300,7 +303,7 @@ Signatures are normative. Names, parameters and return types MUST match unless t
 
 ```ts
 // modules/roles/role.enum.ts
-export enum Role { USER = 'USER', ADMIN = 'ADMIN', SUPER_ADMIN = 'SUPER_ADMIN' }
+export enum Role { USER = 'USER', ADMIN = 'ADMIN' }
 
 // modules/users/enums/user-status.enum.ts
 export enum UserStatus {
@@ -340,9 +343,10 @@ existsByEmail(email: string): Promise<boolean>
 create(input: CreateUserInput): Promise<User>                           // throws AUTH_EMAIL_ALREADY_EXISTS on unique violation
 updatePasswordHash(id: string, passwordHash: string): Promise<void>
 updateLastLoginAt(id: string, at?: Date): Promise<void>
-updateStatus(id: string, status: UserStatus): Promise<User>              // SHOULD-level admin use
-setRoles(id: string, roles: Role[]): Promise<User>                      // SHOULD-level admin use
-list(query: { page: number; limit: number }): Promise<{ items: User[]; total: number }> // SHOULD
+updateStatus(actorId: string, id: string, status: UserStatus): Promise<User>   // admin; self-change forbidden
+setRoles(actorId: string, id: string, roles: Role[]): Promise<User>           // admin; always keeps USER; cannot drop own ADMIN
+list(query: ListUsersQuery): Promise<{ items: User[]; total: number }>          // admin; page, limit, status?, role?, search?
+getStats(): Promise<{ total: number; byStatus: Record<UserStatus, number>; byRole: Record<Role, number> }>
 ```
 
 `UsersRepository` implements the TypeORM work and maps `UserEntity` → `User` / `UserWithCredentials`. `passwordHash` is selected **only** by `findByEmailWithCredentials` (column `select: false`, added explicitly with `addSelect`).
@@ -409,11 +413,11 @@ private createSession(user, ctx): Promise<{ sessionId; tokens }>
 ### 6.7 RolesService
 
 ```ts
-expand(roles: Role[]): Set<Role>            // SUPER_ADMIN → {SUPER_ADMIN, ADMIN, USER}; ADMIN → {ADMIN, USER}
+expand(roles: Role[]): Set<Role>            // ADMIN → {ADMIN, USER}; USER → {USER}
 hasAnyRole(userRoles: Role[], required: Role[]): boolean
 ```
 
-The hierarchy is a constant map in `roles.service.ts`: `{ SUPER_ADMIN: [ADMIN], ADMIN: [USER], USER: [] }`, expanded transitively.
+The hierarchy is a constant map in `roles.service.ts`: `{ ADMIN: [USER], USER: [] }`, expanded transitively. A future role (for example `SUPER_ADMIN: [ADMIN]`) is one map entry.
 
 ### 6.8 Guards, strategies, decorators
 

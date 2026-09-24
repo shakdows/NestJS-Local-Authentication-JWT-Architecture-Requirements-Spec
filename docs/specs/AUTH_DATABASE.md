@@ -56,7 +56,7 @@ Design principles:
 | Postgres type | Values | TS enum |
 |---|---|---|
 | `user_status` | `ACTIVE`, `INACTIVE`, `SUSPENDED`, `PENDING_VERIFICATION` | `UserStatus` |
-| `user_role` | `USER`, `ADMIN`, `SUPER_ADMIN` | `Role` |
+| `user_role` | `USER`, `ADMIN` | `Role` |
 | `session_revoked_reason` | `LOGOUT`, `LOGOUT_ALL`, `LOGOUT_OTHERS`, `REUSE_DETECTED`, `USER_NOT_ACTIVE`, `ADMIN_REVOKED` | `SessionRevokedReason` |
 
 TypeORM enum columns MUST set `enumName` to these exact type names so migrations are deterministic. Adding a value later is a migration: `ALTER TYPE ... ADD VALUE`.
@@ -216,7 +216,7 @@ WHERE (revoked_at IS NOT NULL AND revoked_at < now() - interval '30 days')
   Together they MUST create every constraint and index above with the **exact names** listed. Each MUST have a working `down()` that drops its objects in reverse order.
 - Migrations that have already run MUST never be edited. Changes go in new migrations.
 - The app runs migrations as a deploy step (`npm run migration:run`), not `migrationsRun: true` at boot. E2E tests run migrations once in global setup.
-- `seeds/seed-super-admin.ts` (SHOULD) upserts a user from `SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_PASSWORD` with roles `[SUPER_ADMIN]`. It hashes with `PasswordService` via a standalone Nest application context and does nothing if the user already exists.
+- `seeds/seed-admin.ts` (SHOULD) creates a user from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` with roles `[USER, ADMIN]`. It hashes with `PasswordService` via a standalone Nest application context and does nothing if the user already exists.
 
 ## 8. Data exposure rules
 
