@@ -13,7 +13,9 @@ import { PasswordService } from './services/password.service.js';
 import { TokenService } from './services/token.service.js';
 import { AuthSessionEntity } from './sessions/entities/auth-session.entity.js';
 import { SessionsRepository } from './sessions/sessions.repository.js';
+import { SessionsController } from './sessions/sessions.controller.js';
 import { SessionsService } from './sessions/sessions.service.js';
+import { UserSessionsService } from './sessions/user-sessions.service.js';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 
@@ -28,13 +30,14 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
     UsersModule,
     RolesModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, SessionsController],
   providers: [
     AuthService,
     PasswordService,
     TokenService,
     SessionsRepository,
     SessionsService,
+    UserSessionsService,
     JwtStrategy,
     JwtRefreshStrategy,
   ],

@@ -14,10 +14,13 @@ import type {
   TokensResponseDto,
 } from './dto/auth-response.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
+import type { LogoutResponseDto } from './dto/logout-response.dto.js';
 import type { RegisterDto } from './dto/register.dto.js';
 import { PasswordService } from './services/password.service.js';
 import { TokenService } from './services/token.service.js';
+import { SessionRevokedReason } from './sessions/enums/session-revoked-reason.enum.js';
 import { SessionsService } from './sessions/sessions.service.js';
+import type { AuthenticatedUser } from './types/authenticated-user.type.js';
 import type { RefreshContext } from './types/refresh-context.type.js';
 
 /** Orchestrates authentication use cases; delegates to single-purpose services. */
@@ -127,6 +130,19 @@ export class AuthService {
       throw AuthErrors.refreshTokenInvalid();
     }
     return this.toTokensResponse(tokens);
+  }
+
+  /** Revokes the current session; its access and refresh tokens stop working (FR-LOGOUT-01). */
+  async logout(user: AuthenticatedUser): Promise<LogoutResponseDto> {
+    const revokedSessions = await this.sessionsService.revoke(user.sessionId, SessionRevokedReason.LOGOUT);
+    return { revokedSessions };
+  }
+
+  /** Revokes every active session of the user, including the current one (FR-LOGOUT-02). */
+  async logoutAll(user: AuthenticatedUser): Promise<LogoutResponseDto> {
+    const revokedSessions = await this.sessionsService.revokeAllForUser(user.id, SessionRevokedReason.LOGOUT_ALL);
+    this.logger.log({ event: 'auth.logout_all', userId: user.id, revokedSessions });
+    return { revokedSessions };
   }
 
   /** Current user's profile, read fresh from the database (FR-GUARD-05). */

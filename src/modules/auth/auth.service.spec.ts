@@ -199,3 +199,19 @@ describe('AuthService.refreshTokens (JWT_SPEC §6)', () => {
     expect(sessions.rotate).not.toHaveBeenCalled();
   });
 });
+
+describe('AuthService logout (FR-LOGOUT)', () => {
+  const current = { id: 'u1', email: 'user@example.com', roles: [Role.USER], status: UserStatus.ACTIVE, sessionId: 's1' };
+
+  it('logout revokes only the current session with LOGOUT', async () => {
+    const { service, sessions } = setup();
+    await expect(service.logout(current)).resolves.toEqual({ revokedSessions: 1 });
+    expect(sessions.revoke).toHaveBeenCalledWith('s1', SessionRevokedReason.LOGOUT);
+  });
+
+  it('logout-all revokes every session of the user with LOGOUT_ALL', async () => {
+    const { service, sessions } = setup();
+    await expect(service.logoutAll(current)).resolves.toEqual({ revokedSessions: 3 });
+    expect(sessions.revokeAllForUser).toHaveBeenCalledWith('u1', SessionRevokedReason.LOGOUT_ALL);
+  });
+});

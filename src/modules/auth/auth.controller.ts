@@ -40,6 +40,20 @@ export class AuthController {
     return this.authService.refreshTokens(refresh);
   }
 
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  logout(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.logout(user);
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  logoutAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.logoutAll(user);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
