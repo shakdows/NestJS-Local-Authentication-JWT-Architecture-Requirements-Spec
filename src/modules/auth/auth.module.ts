@@ -13,6 +13,8 @@ import { PasswordService } from './services/password.service.js';
 import { TokenService } from './services/token.service.js';
 import { AuthSessionEntity } from './sessions/entities/auth-session.entity.js';
 import { SessionsRepository } from './sessions/sessions.repository.js';
+import { RolesGuard } from './guards/roles.guard.js';
+import { AdminSessionsController } from './sessions/admin-sessions.controller.js';
 import { SessionsController } from './sessions/sessions.controller.js';
 import { SessionsService } from './sessions/sessions.service.js';
 import { UserSessionsService } from './sessions/user-sessions.service.js';
@@ -30,7 +32,7 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
     UsersModule,
     RolesModule,
   ],
-  controllers: [AuthController, SessionsController],
+  controllers: [AuthController, SessionsController, AdminSessionsController],
   providers: [
     AuthService,
     PasswordService,
@@ -40,7 +42,8 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
     UserSessionsService,
     JwtStrategy,
     JwtRefreshStrategy,
+    RolesGuard,
   ],
-  exports: [SessionsService],
+  exports: [SessionsService, RolesGuard],
 })
 export class AuthModule {}
