@@ -2,7 +2,7 @@
 
 A reusable NestJS 12 backend with a complete **local** authentication system. It uses email/password, JWT access tokens, rotating refresh tokens, per-device sessions and USER/ADMIN role-based authorization. There is no external identity provider.
 
-The design is specified in [`docs/specs/`](docs/specs/README.md). This README covers running the project.
+The design is specified in [`docs/specs/`](docs/specs/README.md). A responsibility-oriented version for AI coding agents (one epic per concern) starts at [`docs/project-requirements/START-PROMPT.md`](docs/project-requirements/START-PROMPT.md). This README covers running the project.
 
 ## Features
 

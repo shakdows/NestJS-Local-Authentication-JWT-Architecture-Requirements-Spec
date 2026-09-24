@@ -4,6 +4,8 @@ This folder holds the specification for the **local email/password + JWT authent
 
 > Scope: local authentication **only**, implemented inside the NestJS backend. External identity providers (Google OAuth, Firebase Auth, Auth0, Clerk, etc.) are **out of scope**. The architecture keeps room to add them later without rewriting local auth.
 
+> **AI agents: start at [`docs/project-requirements/START-PROMPT.md`](../project-requirements/START-PROMPT.md).** That folder reorganizes these specifications by responsibility (one epic per concern). The documents here remain the detailed technical reference.
+
 ## Reading order
 
 | # | File | Purpose |
