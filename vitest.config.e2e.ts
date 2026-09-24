@@ -10,6 +10,7 @@ export default defineConfig({
     include: ['test/**/*.e2e-spec.ts'],
     env: TEST_ENV,
     // One shared database: run files serially (equivalent of Jest --runInBand).
+    globalSetup: ['./test/setup/global-setup.ts'],
     fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 60000,
