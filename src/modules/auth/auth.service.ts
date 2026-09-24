@@ -18,6 +18,7 @@ import type { RegisterDto } from './dto/register.dto.js';
 import { PasswordService } from './services/password.service.js';
 import { TokenService } from './services/token.service.js';
 import { SessionsService } from './sessions/sessions.service.js';
+import type { RefreshContext } from './types/refresh-context.type.js';
 
 /** Orchestrates authentication use cases; delegates to single-purpose services. */
 @Injectable()
@@ -104,6 +105,27 @@ export class AuthService {
       userAgent: ctx.userAgent,
     });
     this.logger.log({ event: 'auth.login.succeeded', userId: user.id, sessionId, ip: ctx.ipAddress });
+    return this.toTokensResponse(tokens);
+  }
+
+  /**
+   * Rotates the refresh token of an already-validated session (JWT_SPEC §6.1). New tokens are
+   * signed first, then swapped in with a compare-and-swap; losing the swap is treated as reuse.
+   */
+  async refreshTokens(refresh: RefreshContext): Promise<TokensResponseDto> {
+    const user = await this.usersService.findById(refresh.userId);
+    if (!user) throw AuthErrors.refreshTokenInvalid();
+    const tokens = await this.generateTokens(user, refresh.sessionId);
+    const rotated = await this.sessionsService.rotate(
+      refresh.sessionId,
+      this.tokenService.hashRefreshToken(refresh.refreshToken),
+      this.tokenService.hashRefreshToken(tokens.refreshToken),
+      tokens.refreshExpiresAt,
+    );
+    if (!rotated) {
+      await this.sessionsService.revokeForReuse(refresh.sessionId, refresh.userId);
+      throw AuthErrors.refreshTokenInvalid();
+    }
     return this.toTokensResponse(tokens);
   }
 

@@ -170,3 +170,32 @@ describe('AuthService', () => {
     ]);
   });
 });
+
+describe('AuthService.refreshTokens (JWT_SPEC §6)', () => {
+  const refresh = { userId: 'u1', sessionId: 's1', refreshToken: 'old.refresh' };
+
+  it('rotates with a compare-and-swap on the old hash and returns the new pair', async () => {
+    const { service, sessions, tokens } = setup();
+    const result = await service.refreshTokens(refresh);
+    expect(tokens.signAccessToken).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1' }), 's1');
+    expect(tokens.signRefreshToken).toHaveBeenCalledWith('u1', 's1');
+    expect(sessions.rotate).toHaveBeenCalledWith(
+      's1', 'sha256(old.refresh)', 'sha256(refresh.jwt)', new Date('2026-02-01T00:00:00Z'),
+    );
+    expect(result).toEqual({ accessToken: 'access.jwt', refreshToken: 'refresh.jwt', tokenType: 'Bearer', expiresIn: 900 });
+  });
+
+  it('treats a lost swap as reuse: revokes the session and returns 401', async () => {
+    const { service, sessions } = setup();
+    sessions.rotate.mockResolvedValue(false);
+    await expect(service.refreshTokens(refresh)).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    expect(sessions.revokeForReuse).toHaveBeenCalledWith('s1', 'u1');
+  });
+
+  it('rejects when the user no longer exists', async () => {
+    const { service, users, sessions } = setup();
+    users.findById.mockResolvedValue(null);
+    await expect(service.refreshTokens(refresh)).rejects.toMatchObject({ code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    expect(sessions.rotate).not.toHaveBeenCalled();
+  });
+});
